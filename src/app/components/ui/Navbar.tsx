@@ -19,7 +19,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-primary text-white relative">
+    <nav className="bg-primary text-white relative h-20">
       <div className="container mx-auto flex items-center justify-between lg:px-16 py-4 lg:py-0">
         {/* Logo Alanı */}
         <div className="flex items-center gap-2">
