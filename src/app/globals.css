@@ -11,4 +11,6 @@ html {
 @theme {
   --color-primary: #2b293d;
   --color-secondary: #ffe047;
+  --color-secondary-dark: #ebcb2b;
+  --color-dark-blue: #4539b4;
 }
