@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import Button from "./Button";
 import { useState } from "react";
 import { AlignRight, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import Logo from "./Logo";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -22,17 +22,7 @@ const Navbar = () => {
     <nav className="bg-primary text-white relative">
       <div className="container mx-auto flex items-center justify-between lg:px-16 py-4 lg:py-0">
         {/* Logo Alanı */}
-        <div className="flex items-center gap-2">
-          <Image
-            src="/images/logo/ticket.png"
-            alt="Eventify"
-            width={40}
-            height={40}
-          />
-          <span className="text-xl md:text-xl font-bold text-secondary">
-            Eventify
-          </span>
-        </div>
+        <Logo />
 
         {/* Desktop Menü */}
         <ul className="hidden lg:flex items-center space-x-8 h-full">

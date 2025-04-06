@@ -68,7 +68,7 @@ const events = [
 
 const PopularEvents = () => {
   return (
-    <section className="py-16">
+    <section className="py-8">
       {/* Başlık */}
       <h2 className="text-2xl sm:text-3xl font-bold mb-6">
         Popular Events in Mumbai

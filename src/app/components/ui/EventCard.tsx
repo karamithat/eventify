@@ -10,6 +10,7 @@ type EventCardProps = {
   price: string;
   interested: string;
   image: string;
+  country?: string; // ✅ yeni ekledik
 };
 
 const EventCard = ({
@@ -21,11 +22,19 @@ const EventCard = ({
   price,
   interested,
   image,
+  country, // ✅ yeni ekledik
 }: EventCardProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden relative">
+    <div className="relative bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200 ease-in-out flex flex-col h-full">
       {/* Image area */}
-      <div className="relative bg-gray-200 w-full h-50 flex items-center justify-center">
+      <div className="relative bg-gray-200 w-full h-48 flex items-center justify-center">
+        {/* Country Badge (doğru yer) */}
+        {country && (
+          <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded">
+            {country}
+          </div>
+        )}
+
         {image ? (
           <Image
             src={image}
@@ -50,7 +59,7 @@ const EventCard = ({
       </div>
 
       {/* Details area */}
-      <div className="py-4 flex gap-3">
+      <div className="py-4 flex gap-3 flex-grow">
         {/* Date */}
         <div className="text-center text-sm font-semibold text-dark-blue min-w-16">
           <div>{date.split(" ")[0]}</div>

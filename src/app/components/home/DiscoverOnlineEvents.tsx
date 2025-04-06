@@ -36,7 +36,7 @@ const events = [
     date: "DEC 14",
     title: "Voices from the Rome Synod: An evening with Austen Ivereigh",
     category: "Cultural & Arts",
-    image: "/images/events/synod.jpg",
+    image: "/images/events/synod.png",
     location: "Online",
     time: "1 PM - 2 PM",
     price: "FREE",
@@ -46,7 +46,7 @@ const events = [
     date: "NOV 29",
     title: "HackerX - Zurich (Full-Stack) 11/29 (Virtual)",
     category: "Technology & Innovation",
-    image: "/images/events/hackerx.jpg",
+    image: "/images/events/hackerx.png",
     location: "Online",
     time: "11:30 AM - 1:30 PM",
     price: "USD 0 - 50",
@@ -56,7 +56,7 @@ const events = [
     date: "DEC 07",
     title: "FRIENDS OF THE METAVERSE: Season of Innovation 2023",
     category: "Technology & Innovation",
-    image: "/images/events/metaverse.jpg",
+    image: "/images/events/metaverse.png",
     location: "Online",
     time: "10:30 AM - 5 PM",
     price: "USD 0 - 150",
@@ -66,7 +66,7 @@ const events = [
 
 const DiscoverOnlineEvents = () => {
   return (
-    <section className="py-16">
+    <section className="py-8">
       {/* Başlık */}
       <h2 className="text-2xl sm:text-3xl font-bold mb-8">
         Discover Best of Online Events

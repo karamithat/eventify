@@ -29,7 +29,7 @@ const categories = [
 
 const ExploreCategories = () => {
   return (
-    <section className="py-16">
+    <section className="py-8">
       <h2 className="text-2xl sm:text-3xl font-bold text-left mb-10">
         Explore Categories
       </h2>
