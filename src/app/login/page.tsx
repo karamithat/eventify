@@ -29,9 +29,7 @@ const SignupPage = () => {
         {/* Content */}
         <div className="w-full max-w-md mx-auto">
           {/* Heading */}
-          <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-            Create Account
-          </h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-6">Login</h2>
 
           {/* Social Buttons */}
           <div className="flex gap-4 mb-6">
@@ -43,7 +41,7 @@ const SignupPage = () => {
                 height={20}
                 className="mr-2"
               />
-              Sign up with Google
+              Login with Google
             </button>
             <button className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50">
               <Image
@@ -53,7 +51,7 @@ const SignupPage = () => {
                 height={20}
                 className="mr-2"
               />
-              Sign up with Facebook
+              Login with Facebook
             </button>
           </div>
 
@@ -66,15 +64,6 @@ const SignupPage = () => {
 
           {/* Form */}
           <form className="space-y-4">
-            <div>
-              <label className="block text-sm mb-1">Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm outline-none"
-              />
-            </div>
-
             <div>
               <label className="block text-sm mb-1">E-mail Address</label>
               <input
@@ -100,17 +89,17 @@ const SignupPage = () => {
               type="submit"
               className="bg-primary text-white font-semibold w-full py-3 rounded-md hover:bg-primary-dark transition cursor-pointer"
             >
-              Create Account
+              Login
             </button>
           </form>
 
           <p className="text-sm text-gray-600 mt-4 text-center">
-            Already have an account?{" "}
+            Dont have an acoount?{" "}
             <Link
-              href="/login"
+              href="/signup"
               className="text-primary font-medium hover:underline"
             >
-              Log In
+              Sign Up
             </Link>
           </p>
         </div>

@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const PersonalizedSection = () => {
   return (
@@ -19,10 +20,12 @@ const PersonalizedSection = () => {
         </p>
 
         {/* Buton */}
-        <button className="inline-flex items-center gap-2 bg-primary text-secondary font-medium px-8 py-3 rounded-md cursor-pointer hover:bg-primary-900 transition duration-300 ease-in-out">   
-          Get Started
-          <ArrowRight className="w-5 h-5" />
-        </button>
+        <Link href="/interest">
+          <button className="inline-flex items-center gap-2 bg-primary text-secondary font-medium px-8 py-3 rounded-md cursor-pointer hover:bg-primary-900 transition duration-300 ease-in-out">
+            Get Started
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </Link>
       </div>
     </section>
   );
