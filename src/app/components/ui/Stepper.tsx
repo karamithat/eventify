@@ -1,41 +1,118 @@
-"use client";
+interface Step {
+  label: string;
+  isCompleted: boolean;
+  isActive: boolean;
+}
 
-import { useState } from "react";
+interface StepperProps {
+  steps: string[];
+  activeStep: number;
+  onChange?: (step: number) => void;
+  className?: string;
+  showButtons?: boolean;
+}
 
-const steps = ["Edit", "Banner", "Ticketing", "Review"];
+const Stepper: React.FC<StepperProps> = ({
+  steps,
+  activeStep,
+  onChange,
+  className = "",
+  showButtons = false,
+}) => {
+  const handleNext = () => {
+    if (activeStep < steps.length - 1 && onChange) {
+      onChange(activeStep + 1);
+    }
+  };
 
-const Stepper = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const handlePrev = () => {
+    if (activeStep > 0 && onChange) {
+      onChange(activeStep - 1);
+    }
+  };
+
+  const getStepStatus = (index: number): Step => {
+    return {
+      label: steps[index],
+      isActive: index === activeStep,
+      isCompleted: index <= activeStep,
+    };
+  };
 
   return (
-    <div className="flex justify-between relative w-full mb-12">
-      {/* Çizgi */}
-      <div className="absolute top-2 left-0 w-full h-0.5 bg-primary" />
+    <div className={`flex flex-col items-center w-full ${className}`}>
+      <div className="relative w-full mb-8">
+        {/* Container div to position lines */}
+        <div className="relative">
+          {/* Main background line - positioned to be in the center of circles */}
+          <div className="absolute top-3 h-px w-full bg-gray-300"></div>
 
-      {steps.map((step, index) => (
-        <div key={index} className="flex flex-col items-center flex-1 relative">
-          {/* Çizgiyi kapatmak için her bir noktanın arkasına background */}
-          <div className="absolute top-2 left-0 w-full h-0.5 bg-transparent z-0" />
-
-          {/* Nokta */}
+          {/* Active line - positioned to be in the center of circles */}
           <div
-            className={`w-5 h-5 rounded-full z-10 ${
-              index <= currentStep
-                ? "bg-secondary border-4 border-primary"
-                : "bg-white border-4 border-gray-300"
-            }`}
+            className="absolute top-3 h-px bg-gray-800 transition-all duration-300"
+            style={{
+              width: `${(100 * (activeStep + 1)) / steps.length}%`,
+            }}
           ></div>
 
-          {/* Başlık */}
-          <span
-            className={`text-sm font-medium mt-3 ${
-              index <= currentStep ? "text-primary" : "text-gray-400"
+          {/* Step circles */}
+          <div className="relative flex justify-between">
+            {steps.map((label, index) => {
+              const stepStatus = getStepStatus(index);
+
+              return (
+                <div key={label} className="flex flex-col items-center">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center border z-10 ${
+                      stepStatus.isCompleted
+                        ? "border-gray-800 bg-white"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {stepStatus.isCompleted && (
+                      <div className="w-3 h-3 rounded-full bg-gray-800"></div>
+                    )}
+                  </div>
+                  <span
+                    className={`mt-2 text-sm ${
+                      stepStatus.isCompleted ? "text-gray-800" : "text-gray-400"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {showButtons && (
+        <div className="flex gap-4">
+          <button
+            onClick={handlePrev}
+            disabled={activeStep === 0}
+            className={`px-4 py-2 rounded ${
+              activeStep === 0
+                ? "bg-gray-200 text-gray-500"
+                : "bg-gray-800 text-white"
             }`}
           >
-            {step}
-          </span>
+            Previous
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={activeStep === steps.length - 1}
+            className={`px-4 py-2 rounded ${
+              activeStep === steps.length - 1
+                ? "bg-gray-200 text-gray-500"
+                : "bg-gray-800 text-white"
+            }`}
+          >
+            Next
+          </button>
         </div>
-      ))}
+      )}
     </div>
   );
 };

@@ -8,10 +8,13 @@ import PersonalizedSection from "./components/home/PersonalizedSection";
 import TrendingEvents from "./components/home/TrendingEvents";
 import CreateEventCTA from "./components/home/CreateEventCTA";
 import Newsletter from "./components/home/Newsletter";
+import Navbar from "./components/ui/Navbar";
+import Footer from "./components/ui/Footer";
 
 const page = () => {
   return (
     <div className="">
+      <Navbar />
       <Hero />
       <Container>
         <ExploreCategories />
@@ -22,6 +25,7 @@ const page = () => {
       </Container>
       <CreateEventCTA />
       <Newsletter />
+      <Footer />
     </div>
   );
 };
