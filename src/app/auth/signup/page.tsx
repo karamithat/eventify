@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, X } from "lucide-react";
-import Logo from "../components/ui/Logo";
+import Logo from "../../components/ui/Logo";
 
 const SignupPage = () => {
   return (
@@ -29,7 +29,9 @@ const SignupPage = () => {
         {/* Content */}
         <div className="w-full max-w-md mx-auto">
           {/* Heading */}
-          <h2 className="text-2xl sm:text-3xl font-bold mb-6">Login</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+            Create Account
+          </h2>
 
           {/* Social Buttons */}
           <div className="flex gap-4 mb-6">
@@ -41,7 +43,7 @@ const SignupPage = () => {
                 height={20}
                 className="mr-2"
               />
-              Login with Google
+              Sign up with Google
             </button>
             <button className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50">
               <Image
@@ -51,7 +53,7 @@ const SignupPage = () => {
                 height={20}
                 className="mr-2"
               />
-              Login with Facebook
+              Sign up with Facebook
             </button>
           </div>
 
@@ -64,6 +66,15 @@ const SignupPage = () => {
 
           {/* Form */}
           <form className="space-y-4">
+            <div>
+              <label className="block text-sm mb-1">Full Name</label>
+              <input
+                type="text"
+                placeholder="Enter your full name"
+                className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm outline-none"
+              />
+            </div>
+
             <div>
               <label className="block text-sm mb-1">E-mail Address</label>
               <input
@@ -89,17 +100,17 @@ const SignupPage = () => {
               type="submit"
               className="bg-primary text-white font-semibold w-full py-3 rounded-md hover:bg-primary-dark transition cursor-pointer"
             >
-              Login
+              Create Account
             </button>
           </form>
 
           <p className="text-sm text-gray-600 mt-4 text-center">
-            Dont have an acoount?{" "}
+            Already have an account?{" "}
             <Link
-              href="/signup"
+              href="/login"
               className="text-primary font-medium hover:underline"
             >
-              Sign Up
+              Log In
             </Link>
           </p>
         </div>

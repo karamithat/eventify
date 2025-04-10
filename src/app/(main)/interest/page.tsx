@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Container from "../components/ui/Container";
+import Container from "../../components/ui/Container";
 // 👈 Container componentini import ediyoruz
 
 const interests = [

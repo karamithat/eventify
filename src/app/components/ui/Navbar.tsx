@@ -44,10 +44,10 @@ const Navbar = () => {
             <Link href="/create-event">Create Event</Link>
           </li>
           <li>
-            <Link href="/login">Login</Link>
+            <Link href="/auth/login">Login</Link>
           </li>
           <li>
-            <Button href="/signup">Sign Up</Button>
+            <Button href="/auth/signup">Sign Up</Button>
           </li>
         </ul>
 
