@@ -4,6 +4,7 @@ import { useState } from "react";
 import Stepper from "../../components/ui/Stepper";
 import Container from "../../components/ui/Container";
 import { Calendar, CircleDollarSign, Clock, Ticket } from "lucide-react";
+import Image from "next/image";
 
 interface EventData {
   title: string;
@@ -214,7 +215,7 @@ const CreateEventPage = () => {
               </p>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-end gap-4 items-center">
               <button
                 onClick={() => setActiveStep(0)}
                 className="text-primary hover:underline"
@@ -310,9 +311,9 @@ const CreateEventPage = () => {
                       placeholder="0.00"
                       value={eventData.ticketPrice}
                       onChange={handleChange}
-                      className="w-full border rounded-md py-2 px-3"
+                      className="w-full border rounded-md py-2 px-3 pr-10"
                     />
-                    <span className="absolute left-3 top-9 text-gray-600">
+                    <span className="absolute left-13 top-8 text-gray-600">
                       ₺
                     </span>
                   </div>
@@ -320,12 +321,12 @@ const CreateEventPage = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-end items-center gap-5">
               <button
                 onClick={() => setActiveStep(activeStep - 1)}
                 className="text-primary hover:underline"
               >
-                Go back
+                Go back to Banner
               </button>
               <button
                 onClick={handleNext}
@@ -338,9 +339,96 @@ const CreateEventPage = () => {
         )}
 
         {activeStep === 3 && (
-          <div className="mt-10 p-6 border rounded bg-gray-50">
-            Review Step Content Here...
-          </div>
+          <section className="py-10 bg-white">
+            <h1 className="text-3xl font-bold text-gray-900 mb-10">
+              Event Title
+            </h1>
+            <p className="text-gray-700">Location</p>
+            <p className="text-gray-700 mb-8">Time</p>
+
+            <div className="mt-10 space-y-6">
+              <p className="text-lg font-semibold mb-4">
+                Nearly there! Check everything’s correct.
+              </p>
+
+              {/* Event Banner */}
+              <div className="border rounded-md overflow-hidden">
+                <Image
+                  src="/path-to-event-banner.jpg"
+                  alt="Event Banner"
+                  width={1170}
+                  height={504}
+                  className="object-cover w-full"
+                />
+              </div>
+
+              {/* Event Details Section */}
+              <div className="space-y-4">
+                <h2 className="text-3xl font-semibold">Event Title</h2>
+
+                <div className="flex justify-between">
+                  <div>
+                    <p className="font-semibold">Date and Time</p>
+                    <p>📅 Day, Date</p>
+                    <p>🕒 Time</p>
+                    <a className="text-indigo-600" href="#">
+                      + Add to Calendar
+                    </a>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold">Ticket Information</p>
+                    <p>🎫 Ticket Type: Price /ticket</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold">Location</p>
+                  <p>📍 Address</p>
+                  <div className="mt-2 bg-gray-200 w-full h-48 flex items-center justify-center">
+                    [Map Placeholder]
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold">Hosted by</p>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-gray-300 rounded-md w-12 h-12"></div>
+                    <div>
+                      <p>Host Name</p>
+                      <button className="border px-3 py-1 rounded mr-2">
+                        Contact
+                      </button>
+                      <button className="border px-3 py-1 rounded">
+                        + Follow
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-semibold mb-1">Event Description</p>
+                  <p className="text-gray-700">
+                    Lorem ipsum dolor sit amet consectetur. Eget vulputate
+                    sociis sit urna sit aliquet. Vivamus facilisis diam libero
+                    dolor volutpat diam eu. Quis a id posuere etiam at enim
+                    vivamus. Urna nisi malesuada libero enim ornare in viverra.
+                    Nibh commodo quis tellus aliquet nibh tristique lobortis id.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-4">
+                <button className="bg-yellow-400 text-gray-900 px-6 py-2 rounded-md hover:bg-yellow-500">
+                  Save for Later
+                </button>
+                <button className="bg-indigo-700 text-white px-6 py-2 rounded-md hover:bg-indigo-800">
+                  Publish Event
+                </button>
+              </div>
+            </div>
+          </section>
         )}
       </Container>
     </section>
