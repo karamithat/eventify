@@ -27,7 +27,7 @@ const events = [
   },
   {
     image: "/images/events/3.png",
-    title: "D2C Fashion Fiesta - For Fashion Founders in Delhi",
+    title: "D2C Fashion Fiestaa - For Fashion Founders in Delhi",
     date: "Dec 02",
     time: "5 PM - 9 PM",
     location: "New Delhi, India",
