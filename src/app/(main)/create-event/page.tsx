@@ -352,9 +352,9 @@ const CreateEventPage = () => {
               </p>
 
               {/* Event Banner */}
-              <div className="border rounded-md overflow-hidden">
+              <div className="rounded-md overflow-hidden">
                 <Image
-                  src="/path-to-event-banner.jpg"
+                  src="/images/events/path-to-event-banner.png"
                   alt="Event Banner"
                   width={1170}
                   height={504}

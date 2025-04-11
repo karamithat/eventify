@@ -12,7 +12,12 @@ import Newsletter from "../components/home/Newsletter";
 const MainPage = () => {
   return (
     <div>
-      <Hero />
+      <Hero
+        title="Don’t miss out!"
+        subtitle="Explore the vibrant events happening locally and globally."
+        backgroundImage="/images/events/hero.png"
+        location="İstanbul"
+      />
       <Container>
         <ExploreCategories />
         <PopularEvents />
