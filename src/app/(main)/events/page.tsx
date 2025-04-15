@@ -1,10 +1,18 @@
+// app/page.tsx
+"use client";
+
+import React from "react";
 import List from "../../components/ui/List";
 import Hero from "../../components/home/Hero";
 import Container from "../../components/ui/Container";
 import Filters from "../../components/ui/Filters";
-import React from "react";
+import SortDropdown from "../../components/ui/SortDropdown";
 
-const page = () => {
+const Page = () => {
+  const handleSort = (value: string) => {
+    console.log("Sorted by:", value);
+  };
+
   return (
     <div>
       <Hero
@@ -21,6 +29,9 @@ const page = () => {
 
           {/* Main Content */}
           <main>
+            <div className="flex justify-end mb-12">
+              <SortDropdown onSelect={handleSort} />
+            </div>
             <List />
           </main>
         </div>
@@ -29,4 +40,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
