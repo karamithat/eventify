@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Eye, X } from "lucide-react";
 import Logo from "../../components/ui/Logo";
 
-const SignupPage = () => {
+const LoginPage = () => {
   return (
     <section className="h-screen flex flex-col md:flex-row bg-primary">
       {/* Left Side */}
@@ -96,7 +96,7 @@ const SignupPage = () => {
           <p className="text-sm text-gray-600 mt-4 text-center">
             Dont have an acoount?{" "}
             <Link
-              href="/signup"
+              href="/auth/signup"
               className="text-primary font-medium hover:underline"
             >
               Sign Up
@@ -108,4 +108,4 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+export default LoginPage;

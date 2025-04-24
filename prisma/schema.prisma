@@ -1,15 +1,114 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Kullanıcı Rolleri
+enum UserRole {
+  USER
+  ORGANIZER
+  ADMIN
+}
+
+// Kullanıcı Modeli
+model User {
+  id             String               @id @default(cuid())
+  name           String?
+  email          String               @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String
+  role           UserRole             @default(USER)
+
+  accounts       Account[]
+  sessions       Session[]
+  events         Event[]
+  registrations  EventRegistration[]
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+// OAuth Hesapları
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Oturum Modeli
+model Session {
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String
+  expires       DateTime
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Etkinlik Modeli
+model Event {
+  id            String                @id @default(cuid())
+  title         String
+  description   String
+  startDate     DateTime
+  endDate       DateTime?
+  location      String
+  capacity      Int
+  price         Float?
+  imageUrl      String?
+
+  author        User                  @relation(fields: [authorId], references: [id])
+  authorId      String
+
+  registrations EventRegistration[]
+
+  isPublished   Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+// Etkinlik Kayıt Modeli
+model EventRegistration {
+  id          String             @id @default(cuid())
+  user        User               @relation(fields: [userId], references: [id])
+  userId      String
+  event       Event              @relation(fields: [eventId], references: [id])
+  eventId     String
+  status      RegistrationStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+
+  @@unique([userId, eventId])
+}
+
+// Kayıt Durumu
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+// NextAuth için Doğrulama Token'ı
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
