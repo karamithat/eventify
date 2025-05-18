@@ -1,11 +1,43 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import Logo from "../../components/ui/Logo";
+import toast from "react-hot-toast";
 
 const LoginPage = () => {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (result?.error) {
+      toast.error("Invalid credentials");
+    } else {
+      toast.success("Giriş başarılı!");
+      router.push("/"); // ✅ Başarılıysa anasayfaya yönlendir
+    }
+  };
+
+  const handleGoogle = () => {
+    signIn("google", { callbackUrl: "/" });
+  };
+
   return (
     <section className="h-screen flex flex-col md:flex-row bg-primary">
       {/* Left Side */}
@@ -21,19 +53,24 @@ const LoginPage = () => {
 
       {/* Right Side */}
       <div className="bg-white text-primary p-8 md:w-3/5 relative h-full flex flex-col justify-center rounded-tl-3xl rounded-bl-3xl">
-        {/* Close Icon */}
-        <button className="absolute top-4 right-4 text-gray-500 hover:text-black">
+        <button
+          className="absolute top-4 right-4 text-gray-500 hover:text-black"
+          onClick={() => router.back()}
+        >
           <X size={24} />
         </button>
 
-        {/* Content */}
         <div className="w-full max-w-md mx-auto">
-          {/* Heading */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-6">Login</h2>
+
+          {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
 
           {/* Social Buttons */}
           <div className="flex gap-4 mb-6">
-            <button className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50">
+            <button
+              onClick={handleGoogle}
+              className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50"
+            >
               <Image
                 src="/images/icons/google.png"
                 alt="Google"
@@ -43,7 +80,10 @@ const LoginPage = () => {
               />
               Login with Google
             </button>
-            <button className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50">
+            <button
+              className="cursor-pointer flex items-center border border-gray-300 rounded-md px-4 py-2 w-full text-sm hover:bg-gray-50"
+              disabled
+            >
               <Image
                 src="/images/icons/facebook.png"
                 alt="Facebook"
@@ -63,13 +103,16 @@ const LoginPage = () => {
           </div>
 
           {/* Form */}
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm mb-1">E-mail Address</label>
               <input
                 type="email"
                 placeholder="Enter your e-mail"
                 className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm outline-none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
@@ -77,11 +120,24 @@ const LoginPage = () => {
               <label className="block text-sm mb-1">Password</label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter password"
                   className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm outline-none"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
-                <Eye className="w-4 h-4 text-gray-500 absolute right-3 top-3 cursor-pointer" />
+                {showPassword ? (
+                  <EyeOff
+                    className="w-4 h-4 text-gray-500 absolute right-3 top-3 cursor-pointer"
+                    onClick={() => setShowPassword(false)}
+                  />
+                ) : (
+                  <Eye
+                    className="w-4 h-4 text-gray-500 absolute right-3 top-3 cursor-pointer"
+                    onClick={() => setShowPassword(true)}
+                  />
+                )}
               </div>
             </div>
 
@@ -94,7 +150,7 @@ const LoginPage = () => {
           </form>
 
           <p className="text-sm text-gray-600 mt-4 text-center">
-            Dont have an acoount?{" "}
+            Don’t have an account?{" "}
             <Link
               href="/auth/signup"
               className="text-primary font-medium hover:underline"

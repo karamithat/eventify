@@ -3,13 +3,15 @@
 import Link from "next/link";
 import Button from "./Button";
 import { useState } from "react";
-import { AlignRight, X } from "lucide-react";
+import { AlignRight, X, Ticket, Star, ChevronDown, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
+import { useSession } from "next-auth/react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { data: session, status } = useSession();
 
   const links = [
     { name: "Home", href: "/" },
@@ -18,10 +20,13 @@ const Navbar = () => {
     { name: "Contact", href: "/contact" },
   ];
 
+  // Eğer session yükleniyorsa hiç render etme (yanıp sönmeyi önler)
+  if (status === "loading") return null;
+
   return (
     <nav className="bg-primary text-white relative">
       <div className="container mx-auto flex items-center justify-between lg:px-16 py-4 lg:py-0">
-        {/* Logo Alanı */}
+        {/* Logo */}
         <Logo />
 
         {/* Desktop Menü */}
@@ -38,18 +43,32 @@ const Navbar = () => {
           ))}
         </ul>
 
-        {/* Sağ Menü (Desktop) */}
-        <ul className="hidden md:flex items-center space-x-8">
-          <li>
-            <Link href="/create-event">Create Event</Link>
-          </li>
-          <li>
-            <Link href="/auth/login">Login</Link>
-          </li>
-          <li>
-            <Button href="/auth/signup">Sign Up</Button>
-          </li>
-        </ul>
+        {/* Sağ Menü */}
+        <div className="hidden md:flex items-center space-x-6">
+          <Link href="/create-event" className="hover:underline">
+            Create Event
+          </Link>
+
+          {session ? (
+            <div className="flex items-center space-x-6">
+              <Link href="/tickets" className="flex items-center gap-1">
+                <Ticket className="w-5 h-5" /> <span>Tickets</span>
+              </Link>
+              <Link href="/interested" className="flex items-center gap-1">
+                <Star className="w-5 h-5" /> <span>Interested</span>
+              </Link>
+              <Link href="/profile" className="flex items-center gap-1">
+                <User className="w-5 h-5" /> <span>Profile</span>
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <Link href="/auth/login">Login</Link>
+              <Button href="/auth/signup">Sign Up</Button>
+            </>
+          )}
+        </div>
 
         {/* Mobil Menü İkonu */}
         <button className="md:hidden" onClick={() => setOpen(!open)}>
@@ -73,19 +92,37 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+
             <li>
               <Link href="/create-event" className="inline-block py-2">
                 Create Event
               </Link>
             </li>
-            <li>
-              <Link href="/login" className="inline-block py-2">
-                Login
-              </Link>
-            </li>
-            <li>
-              <Button href="/signup">Sign Up</Button>
-            </li>
+
+            {session ? (
+              <>
+                <li>
+                  <Link href="/tickets">🎟️ Tickets</Link>
+                </li>
+                <li>
+                  <Link href="/interested">⭐ Interested</Link>
+                </li>
+                <li>
+                  <Link href="/profile">👤 Profile</Link>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link href="/auth/login" className="inline-block py-2">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Button href="/auth/signup">Sign Up</Button>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       )}

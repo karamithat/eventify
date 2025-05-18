@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Eye, EyeOff, X } from "lucide-react";
 import Logo from "../../components/ui/Logo";
 import Image from "next/image";
+import toast from "react-hot-toast";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -29,9 +30,10 @@ export default function SignupPage() {
 
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error || "Kayıt sırasında bir hata oluştu");
+      toast.error(data.error || "Kayıt sırasında bir hata oluştu");
       return;
     }
+    toast.success("Kayıt başarılı! ");
 
     // 2) Kayıt başarılıysa NextAuth ile otomatik giriş yap
     const result = await signIn("credentials", {
@@ -41,9 +43,9 @@ export default function SignupPage() {
     });
 
     if (result?.error) {
-      setError("Kayıt edildi ama giriş yapılamadı.");
+      toast.error("Kayıt edildi ama giriş yapılamadı.");
     } else {
-      router.push("/");
+      router.push("/auth/login");
     }
   };
 

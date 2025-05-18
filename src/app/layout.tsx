@@ -1,10 +1,10 @@
-// app/layout.tsx
 import "./globals.css";
-import type { Metadata } from "next";
+import AuthSessionProvider from "./components/ui/SessionProvider";
+import { Toaster } from "react-hot-toast";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Eventify",
-  description: "Discover and create events worldwide",
+  description: "Find events near you",
 };
 
 export default function RootLayout({
@@ -14,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthSessionProvider>{children}</AuthSessionProvider>
+        <Toaster position="top-right" />
+      </body>
     </html>
   );
 }
