@@ -16,21 +16,33 @@ enum UserRole {
 
 // Kullanıcı Modeli
 model User {
-  id             String               @id @default(cuid())
-  name           String?
-  email          String               @unique
-  emailVerified  DateTime?
-  image          String?
-  password       String
-  role           UserRole             @default(USER)
-
-  accounts       Account[]
-  sessions       Session[]
-  events         Event[]
-  registrations  EventRegistration[]
-
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  interests String[]
+  image         String?
+  password      String
+  role          UserRole  @default(USER)
+  
+  // Ek profil alanları
+  website       String?
+  company       String?
+  phone         String?
+  address       String?
+  city          String?
+  country       String?
+  pincode       String?
+  bio           String?
+  
+  // Existing relations...
+  accounts      Account[]
+  sessions      Session[]
+  events        Event[]
+  registrations EventRegistration[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // OAuth Hesapları

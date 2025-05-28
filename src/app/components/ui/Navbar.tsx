@@ -13,7 +13,7 @@ import {
   LogOut,
   CircleUserRound,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { useSession, signOut } from "next-auth/react";
 
@@ -22,7 +22,6 @@ const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const router = useRouter();
 
   if (status === "loading") return null;
 
@@ -32,6 +31,24 @@ const Navbar = () => {
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];
+
+  // Kullanıcının adını al - eğer yoksa varsayılan değer
+  const getUserDisplayName = () => {
+    if (!session?.user) return "Profile";
+
+    if (session.user.name) {
+      return session.user.name;
+    }
+
+    // Eğer name yoksa email'den önce @ kısmını al
+    if (session.user.email) {
+      return session.user.email.split("@")[0];
+    }
+
+    return "Profile";
+  };
+
+  const displayName = getUserDisplayName();
 
   return (
     <nav className="bg-primary text-white relative">
@@ -70,14 +87,14 @@ const Navbar = () => {
                 <span>Interested</span>
               </Link>
 
-              {/* Profile Dropdown - Relative konumlandırma düzeltildi */}
+              {/* Profile Dropdown - Kullanıcı adı ile */}
               <div className="relative">
                 <button
                   className="flex items-center gap-1 cursor-pointer hover:text-secondary"
                   onClick={() => setShowDropdown(!showDropdown)}
                 >
                   <CircleUserRound className="w-5 h-5" />
-                  <span>Profile</span>
+                  <span className="max-w-32 truncate">{displayName}</span>
                   {showDropdown ? (
                     <ChevronUp className="w-4 h-4 ml-1" />
                   ) : (
@@ -87,8 +104,18 @@ const Navbar = () => {
 
                 {showDropdown && (
                   <div className="absolute top-full right-0 mt-2 bg-white text-primary rounded-md shadow-lg py-2 w-48 z-50 border border-gray-200">
+                    {/* Kullanıcı bilgilerini gösteren header */}
+                    <div className="px-4 py-2 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {session.user.name || "Kullanıcı"}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {session.user.email}
+                      </p>
+                    </div>
+
                     <Link
-                      href="/interested"
+                      href="/interest"
                       className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
                       onClick={() => setShowDropdown(false)}
                     >
@@ -161,6 +188,15 @@ const Navbar = () => {
 
             {session ? (
               <>
+                {/* Mobil menüde kullanıcı bilgisi */}
+                <li className="border-t border-gray-300 pt-3 mt-3">
+                  <div className="py-2">
+                    <p className="text-sm font-medium">👤 {displayName}</p>
+                    <p className="text-xs text-gray-300">
+                      {session.user.email}
+                    </p>
+                  </div>
+                </li>
                 <li>
                   <Link href="/tickets" onClick={() => setOpen(false)}>
                     🎟️ Tickets
