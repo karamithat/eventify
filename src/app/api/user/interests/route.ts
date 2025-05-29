@@ -1,5 +1,5 @@
 // app/api/user/interests/route.js
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route"; // Auth config'inizin yolu
 import { PrismaClient } from "@prisma/client";
@@ -21,8 +21,8 @@ export async function GET() {
 
     console.log("Session user:", session.user); // Debug için
 
-    // User ID'sini al - NextAuth farklı yerlerde tutabilir
-    const userId = session.user.id || session.user.sub;
+    // User ID'sini al - session.user.id mevcut
+    const userId = session.user.id;
     const userEmail = session.user.email;
 
     if (!userId && !userEmail) {
@@ -32,9 +32,22 @@ export async function GET() {
       );
     }
 
-    // Kullanıcının ilgi alanlarını getir - önce email ile dene
+    // Kullanıcının ilgi alanlarını getir - ID varsa ID ile, yoksa email ile
+    const whereClause = userId
+      ? { id: userId }
+      : userEmail
+      ? { email: userEmail }
+      : null;
+
+    if (!whereClause) {
+      return NextResponse.json(
+        { error: "No valid user identifier found" },
+        { status: 400 }
+      );
+    }
+
     const user = await prisma.user.findUnique({
-      where: userId ? { id: userId } : { email: userEmail },
+      where: whereClause,
       select: {
         id: true,
         email: true,
@@ -50,7 +63,7 @@ export async function GET() {
       success: true,
       interests: user.interests || [],
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching user interests:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -60,7 +73,7 @@ export async function GET() {
 }
 
 // POST - Kullanıcının ilgi alanlarını kaydet/güncelle
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     // Kullanıcı oturumunu kontrol et
     const session = await getServerSession(authOptions);
@@ -93,8 +106,8 @@ export async function POST(request) {
       );
     }
 
-    // User ID'sini al - NextAuth farklı yerlerde tutabilir
-    const userId = session.user.id || session.user.sub;
+    // User ID'sini al - session.user.id mevcut
+    const userId = session.user.id;
     const userEmail = session.user.email;
 
     if (!userId && !userEmail) {
@@ -163,9 +176,23 @@ export async function POST(request) {
       );
     }
 
-    // Kullanıcının ilgi alanlarını güncelle - önce email ile dene
+    // Where clause'u güvenli şekilde oluştur
+    const whereClause = userId
+      ? { id: userId }
+      : userEmail
+      ? { email: userEmail }
+      : null;
+
+    if (!whereClause) {
+      return NextResponse.json(
+        { error: "No valid user identifier found" },
+        { status: 400 }
+      );
+    }
+
+    // Kullanıcının ilgi alanlarını güncelle
     const updatedUser = await prisma.user.update({
-      where: userId ? { id: userId } : { email: userEmail },
+      where: whereClause,
       data: {
         interests: interests,
         updatedAt: new Date(),
@@ -190,12 +217,15 @@ export async function POST(request) {
         updatedAt: updatedUser.updatedAt,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error updating user interests:", error);
 
-    // Prisma specific errors
-    if (error.code === "P2025") {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // Prisma specific errors - tip güvenli kontrol
+    if (error && typeof error === "object" && "code" in error) {
+      const prismaError = error as { code: string };
+      if (prismaError.code === "P2025") {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
     }
 
     return NextResponse.json(
@@ -206,7 +236,7 @@ export async function POST(request) {
 }
 
 // PUT - POST ile aynı (opsiyonel)
-export async function PUT(request) {
+export async function PUT(request: NextRequest) {
   return POST(request);
 }
 
@@ -223,7 +253,7 @@ export async function DELETE() {
     }
 
     // User ID'sini al
-    const userId = session.user.id || session.user.sub;
+    const userId = session.user.id;
     const userEmail = session.user.email;
 
     if (!userId && !userEmail) {
@@ -233,8 +263,22 @@ export async function DELETE() {
       );
     }
 
+    // Where clause'u güvenli şekilde oluştur
+    const whereClause = userId
+      ? { id: userId }
+      : userEmail
+      ? { email: userEmail }
+      : null;
+
+    if (!whereClause) {
+      return NextResponse.json(
+        { error: "No valid user identifier found" },
+        { status: 400 }
+      );
+    }
+
     await prisma.user.update({
-      where: userId ? { id: userId } : { email: userEmail },
+      where: whereClause,
       data: {
         interests: [],
         updatedAt: new Date(),
@@ -245,7 +289,7 @@ export async function DELETE() {
       success: true,
       message: "All interests cleared successfully",
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error clearing user interests:", error);
     return NextResponse.json(
       { error: "Internal server error" },

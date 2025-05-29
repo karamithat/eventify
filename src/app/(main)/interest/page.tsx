@@ -1,8 +1,22 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import Container from "../../components/ui/Container";
 
-const interests = [
+// TypeScript interfaces
+interface Interest {
+  category: string;
+  tags: string[];
+}
+
+interface ApiResponse {
+  success: boolean;
+  interests: string[];
+  message?: string;
+}
+
+const interests: Interest[] = [
   {
     category: "Music",
     tags: ["Concerts", "Music Festivals", "Music Workshops", "DJ Nights"],
@@ -89,12 +103,117 @@ const interests = [
   },
 ];
 
-const InterestPage = () => {
-  const [selectedInterests, setSelectedInterests] = useState(new Set());
-  const [isLoading, setIsLoading] = useState(false);
+// API fonksiyonları
+const fetchUserInterests = async (): Promise<string[]> => {
+  const response = await fetch("/api/user/interests");
+  if (!response.ok) {
+    throw new Error("Failed to fetch interests");
+  }
+  const data: ApiResponse = await response.json();
+  return data.interests || [];
+};
+
+const saveUserInterests = async (interests: string[]): Promise<ApiResponse> => {
+  const response = await fetch("/api/user/interests", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      interests,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save interests");
+  }
+
+  return response.json();
+};
+
+const InterestPage: React.FC = () => {
+  const [selectedInterests, setSelectedInterests] = useState<Set<string>>(
+    new Set()
+  );
+  const queryClient = useQueryClient();
+
+  // React Query ile ilgi alanlarını yükle
+  const {
+    data: userInterests,
+    isLoading: isLoadingInterests,
+    error,
+    isSuccess,
+  } = useQuery<string[], Error>({
+    queryKey: ["userInterests"],
+    queryFn: fetchUserInterests,
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 dakika
+    refetchOnWindowFocus: false,
+  });
+
+  // Data yüklendiğinde selectedInterests'i güncelle
+  useEffect(() => {
+    if (isSuccess && userInterests) {
+      setSelectedInterests(new Set(userInterests));
+      if (userInterests.length > 0) {
+        toast.success(`${userInterests.length} ilgi alanınız yüklendi`, {
+          duration: 2000,
+          position: "top-center",
+          style: {
+            background: "#3B82F6",
+            color: "#fff",
+          },
+        });
+      }
+    }
+  }, [isSuccess, userInterests]);
+
+  // Error durumunda toast göster
+  useEffect(() => {
+    if (error) {
+      toast.error("İlgi alanları yüklenirken hata oluştu", {
+        duration: 3000,
+        position: "top-center",
+      });
+    }
+  }, [error]);
+
+  // React Query Mutation ile kaydetme
+  const saveInterestsMutation = useMutation<ApiResponse, Error, string[]>({
+    mutationFn: saveUserInterests,
+    onSuccess: () => {
+      toast.success("İlgi alanlarınız başarıyla kaydedildi! 🎉", {
+        duration: 4000,
+        position: "top-center",
+        style: {
+          background: "#10B981",
+          color: "#fff",
+        },
+      });
+      // Cache'i güncelle
+      queryClient.setQueryData<string[]>(
+        ["userInterests"],
+        Array.from(selectedInterests)
+      );
+    },
+    onError: (error) => {
+      console.error("Save interests error:", error);
+      toast.error(
+        "Kaydetme sırasında bir hata oluştu. Lütfen tekrar deneyin.",
+        {
+          duration: 4000,
+          position: "top-center",
+          style: {
+            background: "#EF4444",
+            color: "#fff",
+          },
+        }
+      );
+    },
+  });
 
   // Etiket seçme/seçimi kaldırma fonksiyonu
-  const toggleInterest = (tag) => {
+  const toggleInterest = (tag: string): void => {
     const newSelectedInterests = new Set(selectedInterests);
     if (newSelectedInterests.has(tag)) {
       newSelectedInterests.delete(tag);
@@ -104,105 +223,144 @@ const InterestPage = () => {
     setSelectedInterests(newSelectedInterests);
   };
 
-  // Database'e kaydetme fonksiyonu
-  const saveInterests = async () => {
+  // Kaydetme fonksiyonu
+  const saveInterests = async (): Promise<void> => {
     if (selectedInterests.size === 0) {
-      alert("Lütfen en az bir ilgi alanı seçiniz!");
+      toast.error("Lütfen en az bir ilgi alanı seçiniz!", {
+        duration: 3000,
+        position: "top-center",
+      });
       return;
     }
 
-    setIsLoading(true);
+    // Loading toast göster
+    const loadingToast = toast.loading("İlgi alanlarınız kaydediliyor...", {
+      position: "top-center",
+    });
 
     try {
-      // API endpoint'inizi buraya yazın
-      const response = await fetch("/api/user/interests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          interests: Array.from(selectedInterests),
-        }),
-      });
+      // Biraz bekleme ekleyelim (gerçekçi loading experience için)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (response.ok) {
-        alert("İlgi alanlarınız başarıyla kaydedildi!");
-        // İsteğe bağlı: Başka bir sayfaya yönlendirme
-        // router.push('/dashboard');
-      } else {
-        throw new Error("Kaydetme işlemi başarısız oldu");
-      }
+      await saveInterestsMutation.mutateAsync(Array.from(selectedInterests));
+      toast.dismiss(loadingToast);
     } catch (error) {
-      console.error("Error saving interests:", error);
-      alert("Kaydetme sırasında bir hata oluştu. Lütfen tekrar deneyin.");
-    } finally {
-      setIsLoading(false);
+      toast.dismiss(loadingToast);
+      console.error("Error in saveInterests:", error);
     }
   };
 
   return (
-    <Container>
-      {/* Top Text */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Share your interests with us
-        </h1>
-        <p className="text-gray-600">
-          Choose your interests below to get personalized event suggestions.
-        </p>
-      </div>
+    <>
+      <section className="min-h-screen bg-white text-primary py-12">
+        <Container>
+          {/* Top Text */}
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">
+              Share your interests with us
+            </h2>
+            <p className="text-sm text-gray-600 mb-8">
+              Choose your interests below to get personalized event suggestions.
+            </p>
 
-      {/* Selected Count */}
-      <div className="text-center mb-6">
-        <span className="text-sm text-gray-500">
-          {selectedInterests.size} ilgi alanı seçildi
-        </span>
-      </div>
+            {/* Loading State */}
+            {isLoadingInterests && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                <p className="text-gray-500">İlgi alanlarınız yükleniyor...</p>
+              </div>
+            )}
 
-      {/* Interests List */}
-      <div className="space-y-6 mb-8">
-        {interests.map((interest, index) => (
-          <div key={index} className="bg-white rounded-lg p-6 shadow-sm border">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              {interest.category}
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {interest.tags.map((tag, idx) => (
+            {/* Error State */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+                <p className="text-red-700">
+                  Bir hata oluştu. Lütfen sayfayı yenileyin.
+                </p>
                 <button
-                  key={idx}
-                  onClick={() => toggleInterest(tag)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
-                    selectedInterests.has(tag)
-                      ? "bg-yellow-400 text-black border-yellow-400 shadow-md"
-                      : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
-                  }`}
+                  onClick={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ["userInterests"],
+                    })
+                  }
+                  className="mt-2 text-sm text-red-600 underline hover:text-red-800"
                 >
-                  {tag}
-                  {selectedInterests.has(tag) && (
-                    <span className="ml-2 text-black">✕</span>
-                  )}
+                  Tekrar dene
                 </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+              </div>
+            )}
 
-      {/* Save Button */}
-      <div className="text-center">
-        <button
-          onClick={saveInterests}
-          disabled={isLoading || selectedInterests.size === 0}
-          className={`px-8 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
-            isLoading || selectedInterests.size === 0
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-lg hover:shadow-xl"
-          }`}
-        >
-          {isLoading ? "Kaydediliyor..." : "Save my Interests"}
-        </button>
-      </div>
-    </Container>
+            {/* Interests List */}
+            {!isLoadingInterests && !error && (
+              <>
+                {/* Selected Count */}
+                {selectedInterests.size > 0 && (
+                  <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
+                      ✨ {selectedInterests.size} ilgi alanı seçili
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-8">
+                  {interests.map((interest, index) => (
+                    <div key={index}>
+                      <h3 className="text-lg font-semibold mb-3">
+                        {interest.category}
+                      </h3>
+                      <div className="flex flex-wrap gap-2 border-b-1 pb-6 border-gray-200">
+                        {interest.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            onClick={() => toggleInterest(tag)}
+                            className={`inline-flex items-center text-xs sm:text-sm font-medium px-3 py-1 rounded-full cursor-pointer transition ${
+                              selectedInterests.has(tag)
+                                ? "bg-yellow-400 text-primary"
+                                : "bg-white text-primary hover:bg-yellow-400"
+                            }`}
+                          >
+                            {tag}
+                            {selectedInterests.has(tag) && (
+                              <span className="ml-1">✕</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Save Button */}
+          {!isLoadingInterests && !error && (
+            <div className="mt-12 flex justify-end">
+              <button
+                onClick={saveInterests}
+                disabled={
+                  saveInterestsMutation.isPending ||
+                  selectedInterests.size === 0
+                }
+                className={`text-sm sm:text-base font-medium px-6 py-2 rounded-md transition flex items-center gap-2 cursor-pointer ${
+                  saveInterestsMutation.isPending ||
+                  selectedInterests.size === 0
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-primary text-white hover:bg-primary-dark"
+                }`}
+              >
+                {saveInterestsMutation.isPending && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                {saveInterestsMutation.isPending
+                  ? "Kaydediliyor..."
+                  : "Save my Interests"}
+              </button>
+            </div>
+          )}
+        </Container>
+      </section>
+    </>
   );
 };
 
