@@ -74,23 +74,35 @@ model Session {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Etkinlik Modeli
 model Event {
   id            String                @id @default(cuid())
   title         String
-  description   String
+  description   String?
+  category      String
   startDate     DateTime
   endDate       DateTime?
-  location      String
-  capacity      Int
-  price         Float?
+  startTime     String
+  endTime       String?
+  location      String                // "Online" or "Venue"
+  
+  // Venue bilgileri
+  venueName     String?
+  venueAddress  String?
+  venueCity     String?
+  
+  // Ticket bilgileri
+  eventType     String                // "free" or "ticketed"
+  ticketName    String?
+  ticketPrice   Float?
+  
+  capacity      Int?
   imageUrl      String?
-
+  
   author        User                  @relation(fields: [authorId], references: [id])
   authorId      String
-
+  
   registrations EventRegistration[]
-
+  
   isPublished   Boolean               @default(false)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
