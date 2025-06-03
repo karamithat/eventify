@@ -12,6 +12,7 @@ import {
   ChevronUp,
   LogOut,
   CircleUserRound,
+  Calendar,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
@@ -115,6 +116,14 @@ const Navbar = () => {
                     </div>
 
                     <Link
+                      href="/my-events"
+                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      My Events
+                    </Link>
+                    <Link
                       href="/interest"
                       className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
                       onClick={() => setShowDropdown(false)}
@@ -198,6 +207,11 @@ const Navbar = () => {
                   </div>
                 </li>
                 <li>
+                  <Link href="/my-events" onClick={() => setOpen(false)}>
+                    📅 My Events
+                  </Link>
+                </li>
+                <li>
                   <Link href="/tickets" onClick={() => setOpen(false)}>
                     🎟️ Tickets
                   </Link>
@@ -208,7 +222,7 @@ const Navbar = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/interested" onClick={() => setOpen(false)}>
+                  <Link href="/interest" onClick={() => setOpen(false)}>
                     Interests
                   </Link>
                 </li>
