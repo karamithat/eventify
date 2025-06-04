@@ -17,6 +17,7 @@ import {
   Search,
   MoreVertical,
   Copy,
+  ExternalLink,
 } from "lucide-react";
 
 interface Event {
@@ -49,6 +50,10 @@ const MyEventsPage = () => {
   const [filter, setFilter] = useState<"all" | "published" | "draft">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    event: Event | null;
+  }>({ isOpen: false, event: null });
 
   // Session kontrolü
   useEffect(() => {
@@ -112,10 +117,6 @@ const MyEventsPage = () => {
 
   // Event silme
   const deleteEvent = async (eventId: string) => {
-    if (!confirm("Bu etkinliği silmek istediğinizden emin misiniz?")) {
-      return;
-    }
-
     const loadingToast = toast.loading("Etkinlik siliniyor...");
 
     try {
@@ -128,6 +129,7 @@ const MyEventsPage = () => {
       if (response.ok) {
         toast.success("Etkinlik başarıyla silindi!");
         setEvents(events.filter((event) => event.id !== eventId));
+        setDeleteModal({ isOpen: false, event: null });
       } else {
         toast.error("Etkinlik silinirken hata oluştu");
       }
@@ -136,6 +138,12 @@ const MyEventsPage = () => {
       console.error("Error deleting event:", error);
       toast.error("Etkinlik silinirken hata oluştu");
     }
+  };
+
+  // Delete modal açma
+  const openDeleteModal = (event: Event) => {
+    setDeleteModal({ isOpen: true, event });
+    setShowDropdown(null);
   };
 
   // Event kopyalama
@@ -366,10 +374,7 @@ const MyEventsPage = () => {
                           </button>
                           <hr className="my-1" />
                           <button
-                            onClick={() => {
-                              deleteEvent(event.id);
-                              setShowDropdown(null);
-                            }}
+                            onClick={() => openDeleteModal(event)}
                             className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -468,6 +473,98 @@ const MyEventsPage = () => {
           )}
         </Container>
       </section>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && deleteModal.event && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in-0 zoom-in-95 duration-200 opacity-100 relative z-10">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Delete Event
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-gray-900">
+                  "{deleteModal.event.title}"
+                </span>
+                ? This will permanently remove the event and all associated
+                data.
+              </p>
+
+              {/* Event Preview */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  {deleteModal.event.imageUrl ? (
+                    <Image
+                      src={deleteModal.event.imageUrl}
+                      alt={deleteModal.event.title}
+                      width={60}
+                      height={60}
+                      className="object-cover rounded-md"
+                    />
+                  ) : (
+                    <div className="w-15 h-15 bg-gray-200 rounded-md flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 truncate">
+                      {deleteModal.event.title}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {formatFullDate(deleteModal.event.startDate)} •{" "}
+                      {deleteModal.event.category}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          deleteModal.event.isPublished
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {deleteModal.event.isPublished ? "Published" : "Draft"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteModal({ isOpen: false, event: null })}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteEvent(deleteModal.event!.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Event
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Container */}
       <Toaster />
