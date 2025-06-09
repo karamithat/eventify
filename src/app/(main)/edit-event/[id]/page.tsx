@@ -38,6 +38,7 @@ interface EventData {
 interface City {
   name: string;
   country: string;
+  state?: string;
   population?: number;
 }
 
@@ -59,11 +60,17 @@ const EditEventPage = () => {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [isSearchingCities, setIsSearchingCities] = useState(false);
 
+  // Hydration-safe loading state
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // State'i tanımla
   const [eventData, setEventData] = useState<EventData>({
     title: "",
     category: "Music",
-    startDate: "",
+    startDate: new Date().toISOString().split("T")[0], // Sabit initial date
     startTime: "19:00",
     endTime: "22:00",
     location: "",
@@ -134,6 +141,7 @@ const EditEventPage = () => {
   };
 
   // Event güncelleme fonksiyonu
+  // Event güncelleme fonksiyonu - Geliştirilmiş hata handling ile
   const updateEvent = async (isPublished = false) => {
     // Validation
     if (
@@ -200,64 +208,95 @@ const EditEventPage = () => {
 
       toast.dismiss(loadingToast);
 
-      if (response.ok) {
-        const data = await response.json();
+      // Response content type kontrolü
+      const contentType = response.headers.get("content-type");
+      let data;
 
-        if (isPublished) {
-          toast.success("Etkinlik başarıyla güncellendi! 🎉", {
-            duration: 4000,
-            position: "top-center",
-            style: {
-              background: "#10B981",
-              color: "#fff",
-            },
-          });
-
-          // Yayınlandıysa events sayfasına yönlendir
-          setTimeout(() => {
-            router.push("/events");
-          }, 1500);
-        } else {
-          toast.success("Değişiklikler kaydedildi ✅", {
-            duration: 3000,
-            position: "top-center",
-            style: {
-              background: "#3B82F6",
-              color: "#fff",
-            },
-          });
-        }
-
-        console.log("Updated event:", data.event);
-        return true;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Güncelleme işlemi başarısız oldu");
+        // JSON değilse text olarak oku
+        const textData = await response.text();
+        console.error("Non-JSON Response:", textData);
+        throw new Error("Server response is not JSON");
+      }
+
+      if (response.ok) {
+        if (data.success) {
+          if (isPublished) {
+            toast.success("Etkinlik başarıyla güncellendi! 🎉", {
+              duration: 4000,
+              position: "top-center",
+              style: {
+                background: "#10B981",
+                color: "#fff",
+              },
+            });
+
+            // Yayınlandıysa events sayfasına yönlendir
+            setTimeout(() => {
+              router.push("/events");
+            }, 1500);
+          } else {
+            toast.success("Değişiklikler kaydedildi ✅", {
+              duration: 3000,
+              position: "top-center",
+              style: {
+                background: "#3B82F6",
+                color: "#fff",
+              },
+            });
+          }
+
+          console.log("Updated event:", data.event);
+          return true;
+        } else {
+          throw new Error(data.message || "Güncelleme işlemi başarısız oldu");
+        }
+      } else {
+        // HTTP error status codes
+        if (response.status === 401) {
+          toast.error("Oturum süreniz dolmuş, lütfen tekrar giriş yapın");
+          router.push("/auth/login");
+        } else if (response.status === 404) {
+          toast.error("Etkinlik bulunamadı veya yetkiniz yok");
+        } else if (response.status === 405) {
+          toast.error("API endpoint PUT metodunu desteklemiyor");
+        } else {
+          throw new Error(data?.message || `HTTP Error: ${response.status}`);
+        }
       }
     } catch (error) {
       console.error("Error updating event:", error);
       toast.dismiss(loadingToast);
 
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Güncelleme sırasında bir hata oluştu. Lütfen tekrar deneyin.",
-        {
+      if (error.name === "TypeError" && error.message.includes("JSON")) {
+        toast.error("Sunucu yanıtı geçersiz format. Lütfen tekrar deneyin.", {
           duration: 4000,
           position: "top-center",
-          style: {
-            background: "#EF4444",
-            color: "#fff",
-          },
-        }
-      );
+        });
+      } else {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Güncelleme sırasında bir hata oluştu. Lütfen tekrar deneyin.",
+          {
+            duration: 4000,
+            position: "top-center",
+            style: {
+              background: "#EF4444",
+              color: "#fff",
+            },
+          }
+        );
+      }
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // City search function with API
+  // City search function with Country State City API
   const searchCities = async (query: string) => {
     if (query.length < 2) {
       setCitySearchResults([]);
@@ -266,43 +305,97 @@ const EditEventPage = () => {
 
     setIsSearchingCities(true);
     try {
+      // Country State City API ile şehir arama
       const response = await fetch(
-        `https://wft-geo-db.p.rapidapi.com/v1/geo/cities?namePrefix=${encodeURIComponent(
-          query
-        )}&limit=10&sort=population&types=CITY`,
+        `https://api.countrystatecity.in/v1/cities`,
         {
           method: "GET",
           headers: {
-            "X-RapidAPI-Key":
-              "d36cce2ad0msh0963de7f4861e0ep12672ajsn232b525a016b",
-            "X-RapidAPI-Host": "wft-geo-db.p.rapidapi.com",
+            "X-CSCAPI-KEY":
+              "c0o3dnpubTQ0enVTaUVYZFVxdDBXQVF0eW9ZMk5CcjZVRDlBbElsYw==",
           },
         }
       );
 
       if (response.ok) {
-        const data = await response.json();
-        const cities =
-          data.data?.map((city: any) => ({
+        const cities = await response.json();
+        // Query ile eşleşen şehirleri filtrele
+        const filteredCities = cities
+          .filter((city: any) =>
+            city.name.toLowerCase().includes(query.toLowerCase())
+          )
+          .slice(0, 10) // İlk 10 sonucu al
+          .map((city: any) => ({
             name: city.name,
-            country: city.country,
-            population: city.population,
-          })) || [];
-        setCitySearchResults(cities);
+            country: city.country_name,
+            state: city.state_name,
+            population: undefined, // Bu API'de population bilgisi yok
+          }));
+        setCitySearchResults(filteredCities);
       } else {
         console.log("API Error:", response.status);
-        // Fallback cities
+        // Fallback: Türkiye şehirleri
         const fallbackCities = [
-          { name: "Istanbul", country: "Turkey", population: 15462000 },
-          { name: "Ankara", country: "Turkey", population: 5503000 },
-          { name: "Izmir", country: "Turkey", population: 4367000 },
-          { name: "Bursa", country: "Turkey", population: 3101000 },
-          { name: "Antalya", country: "Turkey", population: 2511000 },
-          { name: "Adana", country: "Turkey", population: 2274000 },
-          { name: "London", country: "United Kingdom", population: 9000000 },
-          { name: "New York", country: "United States", population: 8400000 },
-          { name: "Paris", country: "France", population: 2165000 },
-          { name: "Berlin", country: "Germany", population: 3669000 },
+          {
+            name: "Istanbul",
+            country: "Turkey",
+            state: "Istanbul",
+            population: 15462000,
+          },
+          {
+            name: "Ankara",
+            country: "Turkey",
+            state: "Ankara",
+            population: 5503000,
+          },
+          {
+            name: "Izmir",
+            country: "Turkey",
+            state: "Izmir",
+            population: 4367000,
+          },
+          {
+            name: "Bursa",
+            country: "Turkey",
+            state: "Bursa",
+            population: 3101000,
+          },
+          {
+            name: "Antalya",
+            country: "Turkey",
+            state: "Antalya",
+            population: 2511000,
+          },
+          {
+            name: "Adana",
+            country: "Turkey",
+            state: "Adana",
+            population: 2274000,
+          },
+          {
+            name: "London",
+            country: "United Kingdom",
+            state: "England",
+            population: 9000000,
+          },
+          {
+            name: "New York",
+            country: "United States",
+            state: "New York",
+            population: 8400000,
+          },
+          {
+            name: "Paris",
+            country: "France",
+            state: "Île-de-France",
+            population: 2165000,
+          },
+          {
+            name: "Berlin",
+            country: "Germany",
+            state: "Berlin",
+            population: 3669000,
+          },
         ].filter((city) =>
           city.name.toLowerCase().includes(query.toLowerCase())
         );
@@ -310,13 +403,44 @@ const EditEventPage = () => {
       }
     } catch (error) {
       console.error("Error searching cities:", error);
+      // Fallback şehir listesi
       const fallbackCities = [
-        { name: "Istanbul", country: "Turkey", population: 15462000 },
-        { name: "Ankara", country: "Turkey", population: 5503000 },
-        { name: "Izmir", country: "Turkey", population: 4367000 },
-        { name: "London", country: "United Kingdom", population: 9000000 },
-        { name: "New York", country: "United States", population: 8400000 },
-        { name: "Paris", country: "France", population: 2165000 },
+        {
+          name: "Istanbul",
+          country: "Turkey",
+          state: "Istanbul",
+          population: 15462000,
+        },
+        {
+          name: "Ankara",
+          country: "Turkey",
+          state: "Ankara",
+          population: 5503000,
+        },
+        {
+          name: "Izmir",
+          country: "Turkey",
+          state: "Izmir",
+          population: 4367000,
+        },
+        {
+          name: "London",
+          country: "United Kingdom",
+          state: "England",
+          population: 9000000,
+        },
+        {
+          name: "New York",
+          country: "United States",
+          state: "New York",
+          population: 8400000,
+        },
+        {
+          name: "Paris",
+          country: "France",
+          state: "Île-de-France",
+          population: 2165000,
+        },
       ].filter((city) => city.name.toLowerCase().includes(query.toLowerCase()));
       setCitySearchResults(fallbackCities);
     } finally {
@@ -346,12 +470,17 @@ const EditEventPage = () => {
       return;
     }
 
-    fetchEvent();
+    // Client-side'da event fetch et
+    if (typeof window !== "undefined") {
+      fetchEvent();
+    }
   }, [session, status, router, pathname, eventId]);
 
   // City selection handler
   const handleCitySelect = (city: City) => {
-    const cityText = `${city.name}, ${city.country}`;
+    const cityText = city.state
+      ? `${city.name}, ${city.state}, ${city.country}`
+      : `${city.name}, ${city.country}`;
     setEventData({ ...eventData, venueCity: cityText });
     setCitySearchQuery(cityText);
     setShowCityDropdown(false);
@@ -391,8 +520,15 @@ const EditEventPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Hydration-safe loading state
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Loading durumu
-  if (status === "loading" || isLoadingEvent) {
+  if (status === "loading" || isLoadingEvent || !isMounted) {
     return (
       <section className="py-10 bg-white">
         <Container>
@@ -533,7 +669,6 @@ const EditEventPage = () => {
                       name="startDate"
                       value={eventData.startDate}
                       onChange={handleChange}
-                      min={new Date().toISOString().split("T")[0]}
                       className="w-full border rounded-md py-2 px-3 focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                     <Calendar
@@ -664,7 +799,7 @@ const EditEventPage = () => {
                           <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
                             {citySearchResults.map((city, index) => (
                               <button
-                                key={`${city.name}-${city.country}-${index}`}
+                                key={`${city.name}-${city.country}-${city.state}-${index}`}
                                 type="button"
                                 onClick={() => handleCitySelect(city)}
                                 className="w-full px-4 py-3 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0 flex items-center justify-between transition-colors"
@@ -674,6 +809,7 @@ const EditEventPage = () => {
                                     {city.name}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
+                                    {city.state && `${city.state}, `}
                                     {city.country}
                                   </span>
                                 </div>

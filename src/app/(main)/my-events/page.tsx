@@ -17,7 +17,7 @@ import {
   Search,
   MoreVertical,
   Copy,
-  ExternalLink,
+  Globe, // Publish icon
 } from "lucide-react";
 
 interface Event {
@@ -137,6 +137,39 @@ const MyEventsPage = () => {
       toast.dismiss(loadingToast);
       console.error("Error deleting event:", error);
       toast.error("Etkinlik silinirken hata oluştu");
+    }
+  };
+
+  // Event yayınlama
+  const publishEvent = async (eventId: string) => {
+    const loadingToast = toast.loading("Etkinlik yayınlanıyor...");
+
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isPublished: true }),
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+        toast.success("Etkinlik başarıyla yayınlandı!");
+        setEvents(
+          events.map((event) =>
+            event.id === eventId ? { ...event, isPublished: true } : event
+          )
+        );
+        setShowDropdown(null);
+      } else {
+        toast.error("Etkinlik yayınlanırken hata oluştu");
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Error publishing event:", error);
+      toast.error("Etkinlik yayınlanırken hata oluştu");
     }
   };
 
@@ -362,6 +395,18 @@ const MyEventsPage = () => {
                             <Edit className="w-4 h-4" />
                             Edit
                           </Link>
+
+                          {/* Publish butonu - sadece draft event'lerde göster */}
+                          {!event.isPublished && (
+                            <button
+                              onClick={() => publishEvent(event.id)}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:bg-green-50 w-full text-left"
+                            >
+                              <Globe className="w-4 h-4" />
+                              Publish Event
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
                               duplicateEvent(event);
@@ -430,18 +475,39 @@ const MyEventsPage = () => {
 
                   {/* Quick Actions */}
                   <div className="px-4 pb-4 flex gap-2">
-                    <Link
-                      href={`/edit-event/${event.id}`}
-                      className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-200 transition text-center"
-                    >
-                      Edit
-                    </Link>
-                    <Link
-                      href={`/events/${event.id}`}
-                      className="flex-1 bg-primary text-white py-2 px-3 rounded text-sm font-medium hover:bg-primary-dark transition text-center"
-                    >
-                      View
-                    </Link>
+                    {/* Draft event'lerde Publish butonu göster */}
+                    {!event.isPublished ? (
+                      <>
+                        <button
+                          onClick={() => publishEvent(event.id)}
+                          className="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded text-sm font-medium hover:bg-green-200 transition text-center flex items-center justify-center gap-1"
+                        >
+                          <Globe className="w-4 h-4" />
+                          Publish
+                        </button>
+                        <Link
+                          href={`/edit-event/${event.id}`}
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-200 transition text-center"
+                        >
+                          Edit
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/edit-event/${event.id}`}
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-200 transition text-center"
+                        >
+                          Edit
+                        </Link>
+                        <Link
+                          href={`/events/${event.id}`}
+                          className="flex-1 bg-primary text-white py-2 px-3 rounded text-sm font-medium hover:bg-primary-dark transition text-center"
+                        >
+                          View
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -500,7 +566,7 @@ const MyEventsPage = () => {
               <p className="text-gray-700 mb-4">
                 Are you sure you want to delete{" "}
                 <span className="font-semibold text-gray-900">
-                  "{deleteModal.event.title}"
+                  {deleteModal.event.title}
                 </span>
                 ? This will permanently remove the event and all associated
                 data.

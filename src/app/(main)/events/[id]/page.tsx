@@ -20,7 +20,15 @@ import {
   Copy,
   Facebook,
   Twitter,
+  Navigation,
 } from "lucide-react";
+
+// Global types for Google Maps
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
 
 interface Event {
   id: string;
@@ -75,7 +83,170 @@ const EventDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Google Maps yükleme fonksiyonu - Singleton pattern
+  const loadGoogleMaps = () => {
+    return new Promise<void>((resolve) => {
+      // Eğer Google Maps zaten yüklüyse
+      if (
+        typeof window !== "undefined" &&
+        window.google &&
+        window.google.maps
+      ) {
+        setMapLoaded(true);
+        resolve();
+        return;
+      }
+
+      // Eğer script zaten eklenmişse (loading durumunda)
+      const existingScript = document.querySelector(
+        'script[src*="maps.googleapis.com"]'
+      );
+      if (existingScript) {
+        // Script zaten var, yüklenmeyi bekle
+        const checkLoaded = setInterval(() => {
+          if (window.google && window.google.maps) {
+            clearInterval(checkLoaded);
+            setMapLoaded(true);
+            resolve();
+          }
+        }, 100);
+        return;
+      }
+
+      // Script henüz yok, yükle
+      if (typeof window !== "undefined") {
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          setMapLoaded(true);
+          resolve();
+        };
+        script.onerror = () => {
+          console.error("Failed to load Google Maps API");
+          resolve();
+        };
+        document.head.appendChild(script);
+      }
+    });
+  };
+
+  // Harita oluşturma fonksiyonu
+  const initializeMap = async (address: string) => {
+    if (!mapLoaded || !window.google) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    const mapElement = document.getElementById("event-map");
+
+    if (!mapElement) return;
+
+    try {
+      const result = await new Promise<google.maps.GeocoderResult[]>(
+        (resolve, reject) => {
+          geocoder.geocode({ address }, (results, status) => {
+            if (status === "OK" && results) {
+              resolve(results);
+            } else {
+              reject(new Error("Geocoding failed"));
+            }
+          });
+        }
+      );
+
+      if (result && result[0]) {
+        const location = result[0].geometry.location;
+
+        const map = new window.google.maps.Map(mapElement, {
+          center: location,
+          zoom: 15,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        });
+
+        // Marker ekle
+        new window.google.maps.Marker({
+          position: location,
+          map: map,
+          title: event?.venueName || "Event Location",
+          icon: {
+            url:
+              "data:image/svg+xml;charset=UTF-8," +
+              encodeURIComponent(`
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="white" stroke-width="4"/>
+                <circle cx="20" cy="20" r="8" fill="white"/>
+              </svg>
+            `),
+            scaledSize: new window.google.maps.Size(40, 40),
+            anchor: new window.google.maps.Point(20, 20),
+          },
+        });
+
+        // Info window ekle
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; max-width: 200px;">
+              <h3 style="margin: 0 0 5px 0; font-weight: bold; color: #1f2937;">${
+                event?.venueName || "Event Location"
+              }</h3>
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">${address}</p>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                address
+              )}" 
+                 target="_blank" 
+                 style="color: #3b82f6; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 5px;">
+                Get Directions →
+              </a>
+            </div>
+          `,
+        });
+
+        // Marker'a tıklandığında info window'u aç
+        const marker = new window.google.maps.Marker({
+          position: location,
+          map: map,
+          title: event?.venueName || "Event Location",
+        });
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker);
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing map:", error);
+      // Fallback: Basit harita placeholder'ı göster
+      const mapElement = document.getElementById("event-map");
+      if (mapElement) {
+        mapElement.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full bg-gray-100 rounded-lg">
+            <div class="w-8 h-8 text-gray-400 mb-2">📍</div>
+            <p class="text-gray-500 text-sm text-center px-4">${address}</p>
+            <a href="https://www.google.com/maps/search/${encodeURIComponent(
+              address
+            )}" 
+               target="_blank" 
+               class="mt-2 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1">
+              <span class="w-3 h-3">🧭</span>
+              Open in Google Maps
+            </a>
+          </div>
+        `;
+      }
+    }
+  };
 
   // Event verilerini getir
   const fetchEvent = async () => {
@@ -122,14 +293,34 @@ const EventDetailPage = () => {
     }
   };
 
+  // Event yüklendikten sonra haritayı başlat
+  useEffect(() => {
+    const initMaps = async () => {
+      if (event && event.location === "Venue" && isMounted) {
+        await loadGoogleMaps();
+      }
+    };
+
+    initMaps();
+  }, [event, isMounted]);
+
+  useEffect(() => {
+    if (mapLoaded && event && event.location === "Venue") {
+      const address = `${event.venueAddress}, ${event.venueCity}`;
+      initializeMap(address);
+    }
+  }, [mapLoaded, event]);
+
   useEffect(() => {
     if (eventId) {
       fetchEvent();
     }
   }, [eventId]);
 
-  // Tarih formatlama
+  // Tarih formatlama (hydration-safe)
   const formatDate = (dateString: string) => {
+    if (!isMounted) return "";
+
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       weekday: "long",
@@ -145,6 +336,8 @@ const EventDetailPage = () => {
 
   // Paylaşım fonksiyonları
   const shareEvent = (platform: string) => {
+    if (!isMounted || typeof window === "undefined") return;
+
     const url = window.location.href;
     const text = `Check out this event: ${event?.title}`;
 
@@ -162,8 +355,10 @@ const EventDetailPage = () => {
         )}&text=${encodeURIComponent(text)}`;
         break;
       case "copy":
-        navigator.clipboard.writeText(url);
-        toast.success("Event link copied to clipboard!");
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url);
+          toast.success("Event link copied to clipboard!");
+        }
         setShowShareModal(false);
         return;
     }
@@ -184,7 +379,7 @@ const EventDetailPage = () => {
 
   // Takvime ekleme
   const addToCalendar = () => {
-    if (!event) return;
+    if (!event || !isMounted || typeof window === "undefined") return;
 
     const startDate = new Date(`${event.startDate}T${event.startTime}`);
     const endDate = event.endTime
@@ -210,7 +405,7 @@ const EventDetailPage = () => {
     window.open(calendarUrl, "_blank");
   };
 
-  if (isLoading) {
+  if (isLoading || !isMounted) {
     return (
       <section className="py-10 bg-gray-50 min-h-screen">
         <Container>
@@ -383,12 +578,42 @@ const EventDetailPage = () => {
                     )}
                   </div>
 
-                  {/* Map placeholder */}
+                  {/* Interactive Map */}
                   {event.location === "Venue" && (
-                    <div className="mt-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">
-                        Map integration would go here
-                      </p>
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Location on Map
+                        </span>
+                        <a
+                          href={`https://www.google.com/maps/search/${encodeURIComponent(
+                            `${event.venueAddress}, ${event.venueCity}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                        >
+                          <Navigation className="w-3 h-3" />
+                          Open in Maps
+                        </a>
+                      </div>
+                      <div
+                        id="event-map"
+                        className="h-48 bg-gray-200 rounded-lg border border-gray-300"
+                        style={{ minHeight: "192px" }}
+                      >
+                        {!mapLoaded && (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                            <p className="text-gray-500 text-sm">
+                              Loading map...
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500 text-center">
+                        Click the marker for directions
+                      </div>
                     </div>
                   )}
                 </div>
@@ -604,9 +829,11 @@ const EventDetailPage = () => {
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           <span>
-                            {new Date(
-                              relatedEvent.startDate
-                            ).toLocaleDateString()}
+                            {isMounted
+                              ? new Date(
+                                  relatedEvent.startDate
+                                ).toLocaleDateString()
+                              : ""}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -644,47 +871,55 @@ const EventDetailPage = () => {
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Share Event</h3>
-                <button
-                  onClick={() => setShowShareModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
+        <>
+          {/* Overlay - her yere tıklanınca modal'ı kapatır */}
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowShareModal(false)}
+          />
 
-              <div className="space-y-3">
-                <button
-                  onClick={() => shareEvent("facebook")}
-                  className="w-full flex items-center gap-3 p-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
-                >
-                  <Facebook className="w-5 h-5" />
-                  Share on Facebook
-                </button>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Share Event</h3>
+                  <button
+                    onClick={() => setShowShareModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ×
+                  </button>
+                </div>
 
-                <button
-                  onClick={() => shareEvent("twitter")}
-                  className="w-full flex items-center gap-3 p-3 rounded-md bg-sky-500 text-white hover:bg-sky-600 transition"
-                >
-                  <Twitter className="w-5 h-5" />
-                  Share on Twitter
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => shareEvent("facebook")}
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                  >
+                    <Facebook className="w-5 h-5" />
+                    Share on Facebook
+                  </button>
 
-                <button
-                  onClick={() => shareEvent("copy")}
-                  className="w-full flex items-center gap-3 p-3 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
-                >
-                  <Copy className="w-5 h-5" />
-                  Copy Link
-                </button>
+                  <button
+                    onClick={() => shareEvent("twitter")}
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-sky-500 text-white hover:bg-sky-600 transition"
+                  >
+                    <Twitter className="w-5 h-5" />
+                    Share on Twitter
+                  </button>
+
+                  <button
+                    onClick={() => shareEvent("copy")}
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                  >
+                    <Copy className="w-5 h-5" />
+                    Copy Link
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       <Toaster />

@@ -78,78 +78,96 @@ const Navbar = () => {
 
           {session ? (
             <div className="flex items-center space-x-6">
-              <Link href="/tickets" className="flex items-center gap-1">
+              <Link
+                href="/tickets"
+                className="flex flex-col items-center gap-1 text-center"
+              >
                 <Ticket className="w-5 h-5" />
-                <span>Tickets</span>
+                <span className="text-xs">Tickets</span>
               </Link>
 
-              <Link href="/interested" className="flex items-center gap-1">
+              <Link
+                href="/interested"
+                className="flex flex-col items-center gap-1 text-center"
+              >
                 <Star className="w-5 h-5" />
-                <span>Interested</span>
+                <span className="text-xs">Interested</span>
               </Link>
 
-              {/* Profile Dropdown - Kullanıcı adı ile */}
+              {/* Profile Dropdown - Overlay ile kapanma özelliği */}
               <div className="relative">
                 <button
-                  className="flex items-center gap-1 cursor-pointer hover:text-secondary"
+                  className="flex flex-col items-center gap-1 text-center cursor-pointer hover:text-secondary"
                   onClick={() => setShowDropdown(!showDropdown)}
                 >
-                  <CircleUserRound className="w-5 h-5" />
-                  <span className="max-w-32 truncate">{displayName}</span>
-                  {showDropdown ? (
-                    <ChevronUp className="w-4 h-4 ml-1" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  )}
+                  <div className="flex items-center gap-1">
+                    <CircleUserRound className="w-5 h-5" />
+                    {showDropdown ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className="text-xs max-w-20 truncate ">
+                    {displayName}
+                  </span>
                 </button>
 
                 {showDropdown && (
-                  <div className="absolute top-full right-0 mt-2 bg-white text-primary rounded-md shadow-lg py-2 w-48 z-50 border border-gray-200">
-                    {/* Kullanıcı bilgilerini gösteren header */}
-                    <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {session.user.name || "Kullanıcı"}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {session.user.email}
-                      </p>
-                    </div>
+                  <>
+                    {/* Invisible overlay - her yere tıklanınca dropdown'u kapatır */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowDropdown(false)}
+                    />
 
-                    <Link
-                      href="/my-events"
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      My Events
-                    </Link>
-                    <Link
-                      href="/interest"
-                      className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      Interests
-                    </Link>
-                    <Link
-                      href="/account-settings"
-                      className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      Account Settings
-                    </Link>
-                    <button
-                      onClick={() => {
-                        signOut();
-                        setShowDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
-                    >
-                      <div className="flex items-center gap-2 cursor-pointer">
-                        <LogOut className="w-4 h-4" />
-                        Log Out
+                    <div className="absolute top-full right-0 mt-2 bg-white text-primary rounded-md shadow-lg py-2 w-48 z-50 border border-gray-200">
+                      {/* Kullanıcı bilgilerini gösteren header */}
+                      <div className="px-4 py-2 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {session.user.name || "Kullanıcı"}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {session.user.email}
+                        </p>
                       </div>
-                    </button>
-                  </div>
+
+                      <Link
+                        href="/my-events"
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        My Events
+                      </Link>
+                      <Link
+                        href="/interest"
+                        className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        Interests
+                      </Link>
+                      <Link
+                        href="/account-settings"
+                        className="block px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        Account Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          signOut();
+                          setShowDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                      >
+                        <div className="flex items-center gap-2 cursor-pointer">
+                          <LogOut className="w-4 h-4" />
+                          Log Out
+                        </div>
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -167,95 +185,108 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobil Menü */}
+      {/* Mobil Menü - Overlay ile kapanma özelliği */}
       {open && (
-        <div className="md:hidden bg-primary px-4 pb-4">
-          <ul className="space-y-3">
-            {links.map((link) => (
-              <li key={link.href}>
+        <>
+          {/* Mobil menü için overlay */}
+          <div
+            className="fixed inset-0 z-30 md:hidden"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="md:hidden bg-primary px-4 pb-4 relative z-40">
+            <ul className="space-y-3">
+              {links.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={`inline-block py-2 ${
+                      pathname === link.href
+                        ? "border-b-2 border-secondary"
+                        : ""
+                    }`}
+                    onClick={() => setOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+
+              <li>
                 <Link
-                  href={link.href}
-                  className={`inline-block py-2 ${
-                    pathname === link.href ? "border-b-2 border-secondary" : ""
-                  }`}
+                  href="/create-event"
+                  className="inline-block py-2"
                   onClick={() => setOpen(false)}
                 >
-                  {link.name}
+                  Create Event
                 </Link>
               </li>
-            ))}
 
-            <li>
-              <Link
-                href="/create-event"
-                className="inline-block py-2"
-                onClick={() => setOpen(false)}
-              >
-                Create Event
-              </Link>
-            </li>
-
-            {session ? (
-              <>
-                {/* Mobil menüde kullanıcı bilgisi */}
-                <li className="border-t border-gray-300 pt-3 mt-3">
-                  <div className="py-2">
-                    <p className="text-sm font-medium">👤 {displayName}</p>
-                    <p className="text-xs text-gray-300">
-                      {session.user.email}
-                    </p>
-                  </div>
-                </li>
-                <li>
-                  <Link href="/my-events" onClick={() => setOpen(false)}>
-                    📅 My Events
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/tickets" onClick={() => setOpen(false)}>
-                    🎟️ Tickets
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/interested" onClick={() => setOpen(false)}>
-                    ⭐ Interested
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/interest" onClick={() => setOpen(false)}>
-                    Interests
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/account-settings" onClick={() => setOpen(false)}>
-                    Account Settings
-                  </Link>
-                </li>
-                <li>
-                  <button
-                    onClick={() => {
-                      signOut();
-                      setOpen(false);
-                    }}
-                  >
-                    Log Out
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li>
-                  <Link href="/auth/login" onClick={() => setOpen(false)}>
-                    Login
-                  </Link>
-                </li>
-                <li>
-                  <Button href="/auth/signup">Sign Up</Button>
-                </li>
-              </>
-            )}
-          </ul>
-        </div>
+              {session ? (
+                <>
+                  {/* Mobil menüde kullanıcı bilgisi */}
+                  <li className="border-t border-gray-300 pt-3 mt-3">
+                    <div className="py-2">
+                      <p className="text-sm font-medium">👤 {displayName}</p>
+                      <p className="text-xs text-gray-300">
+                        {session.user.email}
+                      </p>
+                    </div>
+                  </li>
+                  <li>
+                    <Link href="/my-events" onClick={() => setOpen(false)}>
+                      📅 My Events
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/tickets" onClick={() => setOpen(false)}>
+                      🎟️ Tickets
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/interested" onClick={() => setOpen(false)}>
+                      ⭐ Interested
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/interest" onClick={() => setOpen(false)}>
+                      Interests
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/account-settings"
+                      onClick={() => setOpen(false)}
+                    >
+                      Account Settings
+                    </Link>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setOpen(false);
+                      }}
+                    >
+                      Log Out
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link href="/auth/login" onClick={() => setOpen(false)}>
+                      Login
+                    </Link>
+                  </li>
+                  <li>
+                    <Button href="/auth/signup">Sign Up</Button>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+        </>
       )}
     </nav>
   );
