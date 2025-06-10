@@ -1,20 +1,24 @@
-// app/api/user/profile/route.ts (App Router için)
+// /app/api/user/profile/route.ts
 
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import prisma from "../../../lib/prisma";
+import { PrismaClient } from "@prisma/client";
 
-export async function GET() {
+const prisma = new PrismaClient();
+
+// GET - User profile bilgilerini getir
+export async function GET(request: NextRequest) {
   try {
-    // Kullanıcının oturum açıp açmadığını kontrol et
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.email) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // Kullanıcı verilerini getir
     const user = await prisma.user.findUnique({
       where: {
         email: session.user.email,
@@ -23,22 +27,25 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
-        image: true,
+        interests: true,
         website: true,
         company: true,
         phone: true,
         address: true,
         city: true,
         country: true,
-        pincode: true,
         bio: true,
+        image: true,
+        role: true,
         createdAt: true,
-        updatedAt: true,
       },
     });
 
     if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -46,14 +53,75 @@ export async function GET() {
       user: user,
     });
   } catch (error) {
-    console.error("Get profile error:", error);
-
+    console.error("Error fetching user profile:", error);
     return NextResponse.json(
       {
         success: false,
         message: "Internal server error",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - User profile güncelle
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.email) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        email: session.user.email,
+      },
+      data: {
+        name: body.name,
+        interests: body.interests || [],
+        website: body.website,
+        company: body.company,
+        phone: body.phone,
+        address: body.address,
+        city: body.city,
+        country: body.country,
+        bio: body.bio,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        interests: true,
+        website: true,
+        company: true,
+        phone: true,
+        address: true,
+        city: true,
+        country: true,
+        bio: true,
+        image: true,
+        role: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
       },
       { status: 500 }
     );

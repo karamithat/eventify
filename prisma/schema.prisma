@@ -20,11 +20,11 @@ model User {
   name          String?
   email         String    @unique
   emailVerified DateTime?
-  interests String[]
+  interests     String[]
   image         String?
   password      String
   role          UserRole  @default(USER)
-  
+
   // Ek profil alanları
   website       String?
   company       String?
@@ -34,13 +34,14 @@ model User {
   country       String?
   pincode       String?
   bio           String?
-  
-  // Existing relations...
+
+  // Relations
   accounts      Account[]
   sessions      Session[]
   events        Event[]
   registrations EventRegistration[]
-  
+  tickets       Ticket[]         // Yeni: Kullanıcının biletleri
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -84,31 +85,32 @@ model Event {
   startTime     String
   endTime       String?
   location      String                // "Online" or "Venue"
-  
+
   // Venue bilgileri
   venueName     String?
   venueAddress  String?
   venueCity     String?
-  
+
   // Ticket bilgileri
   eventType     String                // "free" or "ticketed"
   ticketName    String?
   ticketPrice   Float?
-  
+
   capacity      Int?
   imageUrl      String?
-  
+
   author        User                  @relation(fields: [authorId], references: [id])
   authorId      String
-  
+
   registrations EventRegistration[]
-  
+  tickets       Ticket[]              // Yeni: Bu etkinliğin biletleri
+
   isPublished   Boolean               @default(false)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 }
 
-// Etkinlik Kayıt Modeli
+// Etkinlik Kayıt Modeli (Basit kayıt için)
 model EventRegistration {
   id          String             @id @default(cuid())
   user        User               @relation(fields: [userId], references: [id])
@@ -119,6 +121,68 @@ model EventRegistration {
   createdAt   DateTime           @default(now())
 
   @@unique([userId, eventId])
+}
+
+// Yeni: Bilet Modeli
+model Ticket {
+  id           String       @id @default(cuid())
+  ticketNumber String       @unique
+  user         User         @relation(fields: [userId], references: [id])
+  userId       String
+  event        Event        @relation(fields: [eventId], references: [id])
+  eventId      String
+  
+  // Bilet detayları
+  status       TicketStatus @default(ACTIVE)
+  quantity     Int          @default(1)
+  totalAmount  Float        @default(0)
+  qrCode       String       @unique
+  
+  // Katılımcı bilgileri
+  attendees    TicketAttendee[]
+  
+  // Ödeme bilgileri
+  paymentId    String?
+  paymentStatus PaymentStatus @default(PENDING)
+  
+  purchaseDate DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// Yeni: Bilet Katılımcı Modeli
+model TicketAttendee {
+  id       String @id @default(cuid())
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId String
+  
+  fullName String
+  email    String
+  phone    String?
+  
+  // Giriş bilgileri
+  checkedIn Boolean @default(false)
+  checkInAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Bilet Durumu
+enum TicketStatus {
+  ACTIVE      // Aktif, kullanılabilir
+  USED        // Kullanılmış
+  CANCELLED   // İptal edilmiş
+  EXPIRED     // Süresi dolmuş
+  REFUNDED    // İade edilmiş
+}
+
+// Ödeme Durumu
+enum PaymentStatus {
+  PENDING     // Beklemede
+  COMPLETED   // Tamamlandı
+  FAILED      // Başarısız
+  REFUNDED    // İade edildi
 }
 
 // Kayıt Durumu

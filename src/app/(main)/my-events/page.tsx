@@ -372,7 +372,7 @@ const MyEventsPage = () => {
                             showDropdown === event.id ? null : event.id
                           )
                         }
-                        className="bg-white rounded-full p-2 shadow-sm hover:shadow-md transition"
+                        className="bg-white rounded-full p-2 shadow-sm hover:shadow-md transition cursor-pointer"
                       >
                         <MoreVertical className="w-4 h-4 text-gray-700" />
                       </button>
@@ -400,7 +400,7 @@ const MyEventsPage = () => {
                           {!event.isPublished && (
                             <button
                               onClick={() => publishEvent(event.id)}
-                              className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:bg-green-50 w-full text-left"
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:bg-green-50 w-full text-left cursor-pointer"
                             >
                               <Globe className="w-4 h-4" />
                               Publish Event
@@ -412,7 +412,7 @@ const MyEventsPage = () => {
                               duplicateEvent(event);
                               setShowDropdown(null);
                             }}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left cursor-pointer"
                           >
                             <Copy className="w-4 h-4" />
                             Duplicate
@@ -420,7 +420,7 @@ const MyEventsPage = () => {
                           <hr className="my-1" />
                           <button
                             onClick={() => openDeleteModal(event)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                             Delete
