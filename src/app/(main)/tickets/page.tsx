@@ -142,11 +142,22 @@ const TicketsPage = () => {
 
   // Group tickets by status and time
   const now = new Date();
+
+  // Upcoming tickets: ACTIVE status ve gelecek tarihli
   const upcomingTickets = filteredTickets.filter(
     (t) => t.status === "ACTIVE" && new Date(t.event.startDate) > now
   );
+
+  // Past tickets: USED status VEYA geçmiş tarihli
   const pastTickets = filteredTickets.filter(
-    (t) => t.status === "USED" || new Date(t.event.startDate) < now
+    (t) =>
+      t.status === "USED" ||
+      (new Date(t.event.startDate) < now && t.status !== "ACTIVE")
+  );
+
+  // Cancelled tickets: CANCELLED status
+  const cancelledTickets = filteredTickets.filter(
+    (t) => t.status === "CANCELLED"
   );
 
   // Date formatting
@@ -230,25 +241,129 @@ const TicketsPage = () => {
   // Download ticket
   const downloadTicket = async (ticket: TicketData) => {
     try {
-      const response = await fetch(`/api/tickets/${ticket.id}/download`);
+      console.log("📥 Downloading ticket:", ticket.id);
+
+      // Önce basit download endpoint'ini dene
+      const response = await fetch("/api/download-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ticketId: ticket.id }),
+      });
+
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.style.display = "none";
         a.href = url;
-        a.download = `ticket-${ticket.ticketNumber}.pdf`;
+        a.download = `ticket-${ticket.ticketNumber}.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
         toast.success("Ticket downloaded successfully");
-      } else {
-        throw new Error("Download failed");
+        return;
       }
+
+      // Basit endpoint başarısız olursa manuel oluştur
+      throw new Error("API download failed");
     } catch (error) {
       console.error("Error downloading ticket:", error);
-      toast.error("Failed to download ticket");
+
+      // Fallback: manuel download
+      try {
+        console.log("📥 Creating manual download...");
+        const ticketText = generateManualTicketText(ticket);
+        const blob = new Blob([ticketText], {
+          type: "text/plain; charset=utf-8",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = `ticket-${ticket.ticketNumber}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success("Ticket downloaded successfully");
+      } catch (fallbackError) {
+        console.error("Fallback download also failed:", fallbackError);
+        toast.error("Failed to download ticket");
+      }
     }
+  };
+
+  // Manuel ticket text oluşturma fonksiyonu
+  const generateManualTicketText = (ticket: TicketData) => {
+    return `
+=======================================
+          EVENT TICKET
+=======================================
+
+Ticket Number: ${ticket.ticketNumber}
+Status: ${ticket.status}
+Purchase Date: ${formatPurchaseDate(ticket.purchaseDate)}
+
+---------------------------------------
+EVENT DETAILS
+---------------------------------------
+Event: ${ticket.event.title}
+Category: ${ticket.event.category}
+Date: ${formatDate(ticket.event.startDate)}
+Time: ${ticket.event.startTime}${
+      ticket.event.endTime ? ` - ${ticket.event.endTime}` : ""
+    }
+
+Location: ${
+      ticket.event.location === "Venue"
+        ? `${ticket.event.venueName}\n${ticket.event.venueAddress}\n${ticket.event.venueCity}`
+        : ticket.event.location
+    }
+
+---------------------------------------
+TICKET INFORMATION
+---------------------------------------
+Type: ${ticket.event.eventType === "free" ? "FREE EVENT" : "PAID TICKET"}
+${
+  ticket.event.eventType !== "free"
+    ? `Total Amount: ₺${ticket.totalAmount}`
+    : ""
+}
+Quantity: ${ticket.quantity}
+QR Code: ${ticket.qrCode}
+
+---------------------------------------
+ATTENDEES
+---------------------------------------
+${ticket.attendees
+  .map(
+    (attendee, index) =>
+      `${index + 1}. ${attendee.fullName} (${attendee.email})${
+        attendee.phone ? ` - ${attendee.phone}` : ""
+      }`
+  )
+  .join("\n")}
+
+---------------------------------------
+ORGANIZER
+---------------------------------------
+Organized by: ${ticket.event.author.name || ticket.event.author.email}
+Contact: ${ticket.event.author.email}
+
+---------------------------------------
+IMPORTANT NOTES
+---------------------------------------
+• Please arrive 15-30 minutes before the event
+• Bring a valid ID for verification
+• This ticket is non-transferable
+• Show this ticket (or QR code) at the entrance
+
+Generated on: ${new Date().toLocaleString()}
+=======================================
+    `.trim();
   };
 
   // Share ticket
@@ -286,18 +401,28 @@ const TicketsPage = () => {
   // Cancel ticket
   const cancelTicket = async (ticketId: string) => {
     try {
+      console.log("🚫 Cancelling ticket:", ticketId);
+
       const response = await fetch(`/api/tickets/${ticketId}/cancel`, {
         method: "POST",
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log("✅ Ticket cancelled successfully:", result);
+
         toast.success("Ticket cancelled successfully");
-        fetchTickets(); // Refresh tickets
+
+        // Tickets listesini yenile
+        await fetchTickets();
       } else {
-        throw new Error("Cancel failed");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to cancel ticket";
+        console.error("❌ Cancel failed:", errorMessage);
+        toast.error(errorMessage);
       }
     } catch (error) {
-      console.error("Error cancelling ticket:", error);
+      console.error("❌ Error cancelling ticket:", error);
       toast.error("Failed to cancel ticket");
     }
   };
@@ -337,7 +462,7 @@ const TicketsPage = () => {
 
           {/* Stats */}
           {tickets.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -369,6 +494,17 @@ const TicketsPage = () => {
                     </p>
                   </div>
                   <Calendar className="w-8 h-8 text-blue-600" />
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Cancelled</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {tickets.filter((t) => t.status === "CANCELLED").length}
+                    </p>
+                  </div>
+                  <XCircle className="w-8 h-8 text-red-600" />
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -474,6 +610,35 @@ const TicketsPage = () => {
                   </h2>
                   <div className="grid gap-6">
                     {upcomingTickets.map((ticket) => (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onViewDetails={viewTicketDetails}
+                        onShowQR={showQRCode}
+                        onDownload={downloadTicket}
+                        onShare={shareTicket}
+                        onCancel={cancelTicket}
+                        formatDate={formatDate}
+                        formatTime={formatTime}
+                        formatPurchaseDate={formatPurchaseDate}
+                        getStatusStyle={getStatusStyle}
+                        getStatusIcon={getStatusIcon}
+                        getStatusText={getStatusText}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cancelled Tickets */}
+              {cancelledTickets.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <XCircle className="w-5 h-5 text-red-600" />
+                    Cancelled Tickets ({cancelledTickets.length})
+                  </h2>
+                  <div className="grid gap-6">
+                    {cancelledTickets.map((ticket) => (
                       <TicketCard
                         key={ticket.id}
                         ticket={ticket}
@@ -743,6 +908,14 @@ const TicketCard = ({
                   Cancel
                 </button>
               )}
+
+            {/* Cancelled Ticket Info */}
+            {ticket.status === "CANCELLED" && (
+              <div className="flex items-center gap-1 px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                <XCircle className="w-4 h-4" />
+                Ticket Cancelled
+              </div>
+            )}
           </div>
         </div>
       </div>
