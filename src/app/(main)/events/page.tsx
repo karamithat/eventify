@@ -362,7 +362,7 @@ const Page = () => {
   // Sorting handler
   const handleSort = (value: string) => {
     console.log("Sorted by:", value);
-    let sortedEvents = [...filteredEvents];
+    const sortedEvents = [...filteredEvents];
 
     switch (value) {
       case "date":
@@ -413,6 +413,17 @@ const Page = () => {
       addEventMarkers(mapInstanceRef.current);
     }
   }, [filteredEvents]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

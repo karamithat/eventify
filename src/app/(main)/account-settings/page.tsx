@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Camera } from "lucide-react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 interface UserFormData {
   name: string;
@@ -150,6 +151,8 @@ export default function AccountSettings() {
         throw new Error("Failed to update profile");
       }
     } catch (error) {
+      console.error(error);
+
       setMessage({
         type: "error",
         text: "Failed to update profile. Please try again.",
@@ -240,7 +243,7 @@ export default function AccountSettings() {
           <div className="relative group">
             <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shadow">
               {photo ? (
-                <img
+                <Image
                   src={photo}
                   alt="Profile"
                   className="w-full h-full object-cover"

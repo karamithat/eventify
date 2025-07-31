@@ -8,9 +8,10 @@ type EventCardProps = {
   location: string;
   time: string;
   price: string;
-  interested: string;
+  interested?: string;
   image: string;
   country?: string; // ✅ yeni ekledik
+  eventId?: string;
 };
 
 const EventCard = ({

@@ -1,4 +1,4 @@
-// app/api/user/tickets/route.js
+// app/api/user/tickets/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
@@ -6,12 +6,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request) {
+export async function GET() {
   try {
     console.log("🎫 User tickets API called");
 
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       console.log("❌ No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,34 +27,25 @@ export async function GET(request) {
 
     console.log("✅ Fetching tickets for user:", user.id);
 
-    // Önce Ticket modeli ile deneyalim
-    let tickets = [];
-
+    // Önce Ticket modeli
     try {
-      tickets = await prisma.ticket.findMany({
+      const tickets = await prisma.ticket.findMany({
         where: { userId: user.id },
         include: {
           event: {
             include: {
               author: {
-                select: {
-                  name: true,
-                  email: true,
-                  image: true,
-                },
+                select: { name: true, email: true, image: true },
               },
             },
           },
-          attendees: {
-            orderBy: { createdAt: "asc" },
-          },
+          attendees: { orderBy: { createdAt: "asc" } },
         },
         orderBy: { createdAt: "desc" },
       });
 
       console.log(`✅ Found ${tickets.length} tickets via Ticket model`);
 
-      // Transform data for frontend
       const transformedTickets = tickets.map((ticket) => ({
         id: ticket.id,
         ticketNumber: ticket.ticketNumber,
@@ -65,32 +55,32 @@ export async function GET(request) {
         qrCode: ticket.qrCode,
         paymentStatus: ticket.paymentStatus,
         purchaseDate: ticket.purchaseDate.toISOString(),
-        attendees: ticket.attendees.map((attendee) => ({
-          id: attendee.id,
-          fullName: attendee.fullName,
-          email: attendee.email,
-          phone: attendee.phone,
-          checkedIn: attendee.checkedIn,
-          checkInAt: attendee.checkInAt?.toISOString(),
+        attendees: ticket.attendees.map((att) => ({
+          id: att.id,
+          fullName: att.fullName,
+          email: att.email,
+          phone: att.phone,
+          checkedIn: att.checkedIn,
+          checkInAt: att.checkInAt?.toISOString(),
         })),
         event: {
           id: ticket.event.id,
           title: ticket.event.title,
-          description: ticket.event.description,
+          description: ticket.event.description ?? null,
           category: ticket.event.category,
           startDate: ticket.event.startDate.toISOString(),
-          endDate: ticket.event.endDate?.toISOString(),
+          endDate: ticket.event.endDate?.toISOString() ?? null,
           startTime: ticket.event.startTime,
-          endTime: ticket.event.endTime,
+          endTime: ticket.event.endTime ?? null,
           location: ticket.event.location,
-          venueName: ticket.event.venueName,
-          venueAddress: ticket.event.venueAddress,
-          venueCity: ticket.event.venueCity,
+          venueName: ticket.event.venueName ?? null,
+          venueAddress: ticket.event.venueAddress ?? null,
+          venueCity: ticket.event.venueCity ?? null,
           eventType: ticket.event.eventType,
-          ticketName: ticket.event.ticketName,
-          ticketPrice: ticket.event.ticketPrice,
-          imageUrl: ticket.event.imageUrl,
-          author: ticket.event.author,
+          ticketName: ticket.event.ticketName ?? null,
+          ticketPrice: ticket.event.ticketPrice ?? null,
+          imageUrl: ticket.event.imageUrl ?? null,
+          author: ticket.event.author, // { name, email, image }
         },
       }));
 
@@ -99,21 +89,17 @@ export async function GET(request) {
         tickets: transformedTickets,
         count: transformedTickets.length,
       });
-    } catch (ticketError) {
+    } catch {
+      // Ticket modeli yoksa EventRegistration'a düş
       console.log("⚠️ Ticket model not available, trying EventRegistration...");
 
-      // EventRegistration modeli ile deneyalim
       const registrations = await prisma.eventRegistration.findMany({
         where: { userId: user.id },
         include: {
           event: {
             include: {
               author: {
-                select: {
-                  name: true,
-                  email: true,
-                  image: true,
-                },
+                select: { name: true, email: true, image: true },
               },
             },
           },
@@ -125,20 +111,15 @@ export async function GET(request) {
         `✅ Found ${registrations.length} registrations via EventRegistration model`
       );
 
-      // Transform registrations to ticket format
       const transformedTickets = registrations.map((registration) => {
-        // Status mapping: CONFIRMED -> ACTIVE, CANCELLED -> CANCELLED, PENDING -> ACTIVE
-        let status = "ACTIVE";
-        if (registration.status === "CANCELLED") {
-          status = "CANCELLED";
-        } else if (registration.status === "CONFIRMED") {
-          status = "ACTIVE";
-        }
+        // Status mapping
+        const status =
+          registration.status === "CANCELLED" ? "CANCELLED" : "ACTIVE"; // CONFIRMED/PENDING -> ACTIVE
 
         return {
           id: registration.id,
           ticketNumber: `REG-${registration.id}`,
-          status: status,
+          status,
           quantity: 1,
           totalAmount: 0,
           qrCode: `QR-${registration.id}-${Date.now()}`,
@@ -147,7 +128,7 @@ export async function GET(request) {
           attendees: [
             {
               id: `att-${registration.id}`,
-              fullName: user.name || "Unknown",
+              fullName: user.name ?? "Unknown",
               email: user.email,
               phone: null,
               checkedIn: false,
@@ -157,21 +138,21 @@ export async function GET(request) {
           event: {
             id: registration.event.id,
             title: registration.event.title,
-            description: registration.event.description,
+            description: registration.event.description ?? null,
             category: registration.event.category,
             startDate: registration.event.startDate.toISOString(),
-            endDate: registration.event.endDate?.toISOString(),
+            endDate: registration.event.endDate?.toISOString() ?? null,
             startTime: registration.event.startTime,
-            endTime: registration.event.endTime,
+            endTime: registration.event.endTime ?? null,
             location: registration.event.location,
-            venueName: registration.event.venueName,
-            venueAddress: registration.event.venueAddress,
-            venueCity: registration.event.venueCity,
+            venueName: registration.event.venueName ?? null,
+            venueAddress: registration.event.venueAddress ?? null,
+            venueCity: registration.event.venueCity ?? null,
             eventType: registration.event.eventType,
-            ticketName: registration.event.ticketName,
-            ticketPrice: registration.event.ticketPrice,
-            imageUrl: registration.event.imageUrl,
-            author: registration.event.author,
+            ticketName: registration.event.ticketName ?? null,
+            ticketPrice: registration.event.ticketPrice ?? null,
+            imageUrl: registration.event.imageUrl ?? null,
+            author: registration.event.author, // { name, email, image }
           },
         };
       });
@@ -182,10 +163,11 @@ export async function GET(request) {
         count: transformedTickets.length,
       });
     }
-  } catch (error) {
-    console.error("❌ Error fetching user tickets:", error);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ Error fetching user tickets:", message);
     return NextResponse.json(
-      { error: "Internal server error: " + error.message },
+      { error: "Internal server error: " + message },
       { status: 500 }
     );
   } finally {

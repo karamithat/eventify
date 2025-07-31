@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(request) {
+type VerifyQrBody = {
+  qrCode?: string;
+};
+
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { qrCode } = body;
+    const body = (await req.json()) as VerifyQrBody;
+    const { qrCode } = body || {};
 
     if (!qrCode) {
       return NextResponse.json({ error: "QR code required" }, { status: 400 });
@@ -20,21 +22,13 @@ export async function POST(request) {
       include: {
         event: true,
         attendees: true,
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
+        user: { select: { name: true, email: true } },
       },
     });
 
     if (!ticket) {
       return NextResponse.json(
-        {
-          valid: false,
-          error: "Invalid QR code",
-        },
+        { valid: false, error: "Invalid QR code" },
         { status: 404 }
       );
     }
@@ -42,38 +36,29 @@ export async function POST(request) {
     // Bilet durumu kontrolü
     if (ticket.status !== "ACTIVE") {
       return NextResponse.json(
-        {
-          valid: false,
-          error: `Ticket is ${ticket.status.toLowerCase()}`,
-        },
+        { valid: false, error: `Ticket is ${ticket.status.toLowerCase()}` },
         { status: 400 }
       );
     }
 
-    // Etkinlik tarihi kontrolü
-    const eventDate = new Date(ticket.event.startDate);
-    const now = new Date();
-    const eventEndDate = ticket.event.endDate
-      ? new Date(ticket.event.endDate)
-      : new Date(eventDate.getTime() + 24 * 60 * 60 * 1000); // 24 saat sonra
+    // Etkinlik zamanı kontrolü (ms cinsinden)
+    const eventStartMs = new Date(ticket.event.startDate).getTime();
+    const nowMs = Date.now();
+    const eventEndMs = ticket.event.endDate
+      ? new Date(ticket.event.endDate).getTime()
+      : eventStartMs + 24 * 60 * 60 * 1000; // +24 saat
 
-    if (now < eventDate.getTime() - 2 * 60 * 60 * 1000) {
-      // 2 saat öncesinden
+    // Check-in pencere mantığı: başlangıçtan 2 saat önce başlar
+    if (nowMs < eventStartMs - 2 * 60 * 60 * 1000) {
       return NextResponse.json(
-        {
-          valid: false,
-          error: "Too early for check-in",
-        },
+        { valid: false, error: "Too early for check-in" },
         { status: 400 }
       );
     }
 
-    if (now > eventEndDate) {
+    if (nowMs > eventEndMs) {
       return NextResponse.json(
-        {
-          valid: false,
-          error: "Event has ended",
-        },
+        { valid: false, error: "Event has ended" },
         { status: 400 }
       );
     }
@@ -100,11 +85,14 @@ export async function POST(request) {
         user: ticket.user,
       },
     });
-  } catch (error) {
-    console.error("Error verifying QR code:", error);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Error verifying QR code:", message);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

@@ -1,14 +1,17 @@
-import { NextResponse } from "next/server";
+// app/api/tickets/[id]/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request, { params }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -16,6 +19,9 @@ export async function GET(request, { params }) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const ticket = await prisma.ticket.findFirst({
       where: {
@@ -26,11 +32,7 @@ export async function GET(request, { params }) {
         event: {
           include: {
             author: {
-              select: {
-                name: true,
-                email: true,
-                image: true,
-              },
+              select: { name: true, email: true, image: true },
             },
           },
         },
@@ -51,5 +53,7 @@ export async function GET(request, { params }) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

@@ -76,6 +76,39 @@ interface TicketData {
   event: EventData;
 }
 
+interface TicketCardProps {
+  ticket: TicketData;
+  onViewDetails: (ticket: TicketData) => void;
+  onShowQR: (ticket: TicketData) => void;
+  onDownload: (ticket: TicketData) => void;
+  onShare: (ticket: TicketData) => void;
+  onCancel: (ticketId: string) => void;
+  formatDate: (date: string) => string;
+  formatTime: (time: string) => string;
+  formatPurchaseDate: (date: string) => string;
+  getStatusStyle: (status: string) => string;
+  getStatusIcon: (status: string) => React.ReactNode;
+  getStatusText: (status: string) => string;
+}
+
+interface TicketDetailsModalProps {
+  ticket: TicketData;
+  onClose: () => void;
+  formatDate: (date: string) => string;
+  formatTime: (time: string) => string;
+  formatPurchaseDate: (date: string) => string;
+  getStatusStyle: (status: string) => string;
+  getStatusIcon: (status: string) => React.ReactNode;
+  getStatusText: (status: string) => string;
+}
+
+interface QRCodeModalProps {
+  ticket: TicketData;
+  onClose: () => void;
+  formatDate: (date: string) => string;
+  formatTime: (time: string) => string;
+}
+
 const TicketsPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -722,7 +755,7 @@ Generated on: ${new Date().toLocaleString()}
 };
 
 // Ticket Card Component
-const TicketCard = ({
+const TicketCard: React.FC<TicketCardProps> = ({
   ticket,
   onViewDetails,
   onShowQR,
@@ -924,7 +957,7 @@ const TicketCard = ({
 };
 
 // Ticket Details Modal Component
-const TicketDetailsModal = ({
+const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({
   ticket,
   onClose,
   formatDate,
@@ -1156,7 +1189,12 @@ const TicketDetailsModal = ({
 };
 
 // QR Code Modal Component
-const QRCodeModal = ({ ticket, onClose, formatDate, formatTime }) => {
+const QRCodeModal: React.FC<QRCodeModalProps> = ({
+  ticket,
+  onClose,
+  formatDate,
+  formatTime,
+}) => {
   const copyQRCode = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(ticket.qrCode);

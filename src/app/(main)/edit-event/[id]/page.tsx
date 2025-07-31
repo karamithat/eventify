@@ -35,6 +35,13 @@ interface EventData {
   isPublished?: boolean;
 }
 
+interface CityApiResponse {
+  name: string;
+  country_name: string;
+  state_name?: string;
+  // Diğer property’ler de eklenebilir
+}
+
 interface City {
   name: string;
   country: string;
@@ -270,7 +277,11 @@ const EditEventPage = () => {
       console.error("Error updating event:", error);
       toast.dismiss(loadingToast);
 
-      if (error.name === "TypeError" && error.message.includes("JSON")) {
+      if (
+        error instanceof Error &&
+        error.name === "TypeError" &&
+        error.message.includes("JSON")
+      ) {
         toast.error("Sunucu yanıtı geçersiz format. Lütfen tekrar deneyin.", {
           duration: 4000,
           position: "top-center",
@@ -320,17 +331,26 @@ const EditEventPage = () => {
       if (response.ok) {
         const cities = await response.json();
         // Query ile eşleşen şehirleri filtrele
-        const filteredCities = cities
-          .filter((city: any) =>
-            city.name.toLowerCase().includes(query.toLowerCase())
-          )
-          .slice(0, 10) // İlk 10 sonucu al
-          .map((city: any) => ({
-            name: city.name,
-            country: city.country_name,
-            state: city.state_name,
-            population: undefined, // Bu API'de population bilgisi yok
-          }));
+        const filteredCities = Array.isArray(cities)
+          ? cities
+              .filter(
+                (city: unknown): city is CityApiResponse =>
+                  typeof city === "object" &&
+                  city !== null &&
+                  "name" in city &&
+                  typeof (city as CityApiResponse).name === "string" &&
+                  (city as CityApiResponse).name
+                    .toLowerCase()
+                    .includes(query.toLowerCase())
+              )
+              .slice(0, 10)
+              .map((city) => ({
+                name: city.name,
+                country: city.country_name,
+                state: city.state_name,
+                population: undefined,
+              }))
+          : [];
         setCitySearchResults(filteredCities);
       } else {
         console.log("API Error:", response.status);

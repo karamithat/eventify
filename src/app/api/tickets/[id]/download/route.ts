@@ -1,17 +1,96 @@
-// app/api/tickets/[id]/download/route.js
+// app/api/tickets/[id]/download/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+
+type TicketTextData = {
+  ticketNumber: string;
+  qrCode: string;
+  quantity: number;
+  totalAmount: number;
+  event: {
+    title: string;
+    category: string;
+    startDate: Date;
+    startTime: string;
+    endTime?: string;
+    location: string;
+    venueName?: string;
+    venueAddress?: string;
+    venueCity?: string;
+    eventType: string;
+    author: {
+      name?: string;
+      email: string;
+    };
+  };
+  attendees: {
+    fullName: string;
+    email: string;
+    phone?: string | null;
+  }[];
+};
+
+// Prisma’dan birleşik tipler
+type TicketWithRelations = Prisma.TicketGetPayload<{
+  include: { event: { include: { author: true } }; attendees: true };
+}>;
+
+type RegistrationWithRelations = Prisma.EventRegistrationGetPayload<{
+  include: { event: { include: { author: true } } };
+}>;
+
+// Fallback olarak oluşturduğumuz "ticket benzeri" şekil
+type FallbackTicketShape = {
+  ticketNumber: string;
+  qrCode: string;
+  quantity: number;
+  totalAmount: number;
+  event: RegistrationWithRelations["event"];
+  attendees: { fullName: string; email: string; phone: string | null }[];
+};
+
+function ticketToTextData(
+  raw: TicketWithRelations | FallbackTicketShape
+): TicketTextData {
+  return {
+    ticketNumber: raw.ticketNumber,
+    qrCode: raw.qrCode,
+    quantity: raw.quantity,
+    totalAmount: raw.totalAmount,
+    event: {
+      title: raw.event.title,
+      category: raw.event.category,
+      startDate: raw.event.startDate, // Prisma DateTime -> Date
+      startTime: raw.event.startTime,
+      endTime: raw.event.endTime ?? undefined, // null'u undefined'a çevir
+      location: raw.event.location,
+      venueName: raw.event.venueName ?? undefined,
+      venueAddress: raw.event.venueAddress ?? undefined,
+      venueCity: raw.event.venueCity ?? undefined,
+      eventType: raw.event.eventType,
+      author: {
+        name: raw.event.author?.name ?? undefined,
+        email: raw.event.author.email,
+      },
+    },
+    attendees: (raw.attendees || []).map((a) => ({
+      fullName: a.fullName,
+      email: a.email,
+      phone: a.phone ?? undefined,
+    })),
+  };
+}
 
 const prisma = new PrismaClient();
 
-export async function GET(request, { params }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    console.log("📥 Ticket download API called for ticket:", params.id);
-
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -19,48 +98,26 @@ export async function GET(request, { params }) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
-
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Ticket verisini getir
-    let ticketData = null;
-
-    try {
-      // Önce Ticket modelini deneyelim
-      ticketData = await prisma.ticket.findFirst({
-        where: {
-          id: params.id,
-          userId: user.id,
-        },
-        include: {
-          event: {
-            include: { author: true },
-          },
-          attendees: true,
-        },
+    // 1) Ticket modeli
+    let ticketData: TicketWithRelations | FallbackTicketShape | null =
+      await prisma.ticket.findFirst({
+        where: { id: params.id, userId: user.id },
+        include: { event: { include: { author: true } }, attendees: true },
       });
-    } catch (ticketError) {
-      console.log("⚠️ Ticket model not available, trying EventRegistration...");
 
-      // EventRegistration modelini deneyelim
+    // 2) Yoksa EventRegistration fallback’i
+    if (!ticketData) {
       const registration = await prisma.eventRegistration.findFirst({
-        where: {
-          id: params.id,
-          userId: user.id,
-        },
-        include: {
-          event: {
-            include: { author: true },
-          },
-        },
+        where: { id: params.id, userId: user.id },
+        include: { event: { include: { author: true } } },
       });
 
       if (registration) {
-        // Registration'ı ticket formatına çevir
         ticketData = {
-          id: registration.id,
           ticketNumber: `REG-${registration.id}`,
           qrCode: `QR-${registration.id}`,
           quantity: 1,
@@ -81,28 +138,20 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    console.log("✅ Ticket found, generating PDF...");
+    const normalized = ticketToTextData(ticketData);
+    const textContent = generateTicketText(normalized);
 
-    // Simple HTML-based PDF content oluştur
-    const htmlContent = generateTicketHTML(ticketData);
-
-    // Simple text-based ticket dosyası oluştur (PDF yerine)
-    const textContent = generateTicketText(ticketData);
-
-    // Text dosyası olarak döndür
     const response = new NextResponse(textContent);
     response.headers.set("Content-Type", "text/plain");
     response.headers.set(
       "Content-Disposition",
-      `attachment; filename="ticket-${ticketData.ticketNumber}.txt"`
+      `attachment; filename="ticket-${normalized.ticketNumber}.txt"`
     );
-
-    console.log("✅ Ticket file generated successfully");
     return response;
-  } catch (error) {
-    console.error("❌ Error generating ticket download:", error);
+  } catch (err) {
+    console.error("Error generating ticket:", err);
     return NextResponse.json(
-      { error: "Failed to generate ticket: " + error.message },
+      { error: "Failed to generate ticket" },
       { status: 500 }
     );
   } finally {
@@ -110,9 +159,8 @@ export async function GET(request, { params }) {
   }
 }
 
-function generateTicketText(ticket) {
-  const event = ticket.event;
-  const attendees = ticket.attendees || [];
+function generateTicketText(ticket: TicketTextData) {
+  const { event, attendees } = ticket;
 
   return `
 =======================================
@@ -146,12 +194,7 @@ Quantity: ${ticket.quantity}
 ---------------------------------------
 ATTENDEES
 ---------------------------------------
-${attendees
-  .map(
-    (attendee, index) =>
-      `${index + 1}. ${attendee.fullName} (${attendee.email})`
-  )
-  .join("\n")}
+${attendees.map((a, i) => `${i + 1}. ${a.fullName} (${a.email})`).join("\n")}
 
 ---------------------------------------
 ORGANIZER
@@ -170,68 +213,4 @@ IMPORTANT NOTES
 Generated on: ${new Date().toLocaleString()}
 =======================================
   `.trim();
-}
-
-function generateTicketHTML(ticket) {
-  const event = ticket.event;
-  const attendees = ticket.attendees || [];
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Event Ticket - ${ticket.ticketNumber}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .ticket { border: 2px solid #333; padding: 20px; max-width: 600px; }
-        .header { text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-        .section { margin: 15px 0; }
-        .qr-placeholder { border: 1px dashed #ccc; padding: 20px; text-align: center; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <div class="ticket">
-        <div class="header">
-            <h1>EVENT TICKET</h1>
-            <p>Ticket #${ticket.ticketNumber}</p>
-        </div>
-        
-        <div class="section">
-            <h2>${event.title}</h2>
-            <p><strong>Date:</strong> ${new Date(
-              event.startDate
-            ).toLocaleDateString()}</p>
-            <p><strong>Time:</strong> ${event.startTime}</p>
-            <p><strong>Location:</strong> ${
-              event.location === "Venue"
-                ? `${event.venueName}, ${event.venueAddress}, ${event.venueCity}`
-                : event.location
-            }</p>
-        </div>
-        
-        <div class="section">
-            <h3>Attendees</h3>
-            ${attendees
-              .map(
-                (attendee, index) =>
-                  `<p>${index + 1}. ${attendee.fullName} - ${
-                    attendee.email
-                  }</p>`
-              )
-              .join("")}
-        </div>
-        
-        <div class="qr-placeholder">
-            <p>QR Code: ${ticket.qrCode}</p>
-            <p>Show this at the entrance</p>
-        </div>
-        
-        <div class="section">
-            <small>Generated on ${new Date().toLocaleString()}</small>
-        </div>
-    </div>
-</body>
-</html>
-  `;
 }

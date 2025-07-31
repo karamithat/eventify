@@ -34,7 +34,7 @@ const AboutPage = () => {
               About <span className="text-primary">Eventify</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              We're passionate about bringing people together through
+              We are passionate about bringing people together through
               unforgettable events. Our platform makes it easy to discover,
               create, and manage events that matter to you.
             </p>
@@ -139,9 +139,9 @@ const AboutPage = () => {
               Why Choose Eventify?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We've built a comprehensive platform that handles everything from
-              event creation to attendee management, so you can focus on what
-              matters most.
+              We have built a comprehensive platform that handles everything
+              from event creation to attendee management, so you can focus on
+              what matters most.
             </p>
           </div>
 
@@ -268,7 +268,7 @@ const AboutPage = () => {
               Meet Our Team
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're a passionate team of designers, developers, and event
+              We are a passionate team of designers, developers, and event
               enthusiasts dedicated to revolutionizing how people connect
               through events.
             </p>
@@ -380,7 +380,7 @@ const AboutPage = () => {
                     Trust & Security
                   </h3>
                   <p className="text-gray-600">
-                    We're committed to protecting user data and ensuring secure
+                    We are committed to protecting user data and ensuring secure
                     transactions. Trust is the foundation of our platform and
                     community.
                   </p>
@@ -417,8 +417,8 @@ const AboutPage = () => {
               Get in Touch
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Have questions, feedback, or need help with your events? We'd love
-              to hear from you and help you succeed.
+              Have questions, feedback, or need help with your events? We would
+              love to hear from you and help you succeed.
             </p>
           </div>
 

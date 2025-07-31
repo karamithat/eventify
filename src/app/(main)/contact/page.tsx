@@ -16,7 +16,6 @@ import {
   Shield,
   CheckCircle,
   ExternalLink,
-  Globe,
   Calendar,
   Headphones,
 } from "lucide-react";
@@ -31,7 +30,18 @@ const ContactPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -39,7 +49,15 @@ const ContactPage = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -64,6 +82,7 @@ const ContactPage = () => {
         message: "",
       });
     } catch (error) {
+      console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -80,7 +99,7 @@ const ContactPage = () => {
               Get in <span className="text-primary">Touch</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Have questions about Eventify? Need help with your events? We're
+              Have questions about Eventify? Need help with your events? We are
               here to help and would love to hear from you.
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
@@ -111,7 +130,7 @@ const ContactPage = () => {
                 Send us a Message
               </h2>
               <p className="text-gray-600 mb-8">
-                Fill out the form below and we'll get back to you as soon as
+                Fill out the form below and we will get back to you as soon as
                 possible. Usually within 24 hours!
               </p>
 
@@ -167,7 +186,7 @@ const ContactPage = () => {
                       id="category"
                       name="category"
                       value={formData.category}
-                      onChange={handleChange}
+                      onChange={handleSelectChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
                     >
                       <option value="">Select a category</option>
@@ -210,7 +229,7 @@ const ContactPage = () => {
                     id="message"
                     name="message"
                     value={formData.message}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                     required
                     rows={6}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none"
@@ -362,8 +381,8 @@ const ContactPage = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Find quick answers to common questions. Can't find what you're
-              looking for? Contact us and we'll help you out!
+              Find quick answers to common questions. Cant find what you are
+              looking for? Contact us and we will help you out!
             </p>
           </div>
 
@@ -378,7 +397,7 @@ const ContactPage = () => {
                     How do I create my first event?
                   </h3>
                   <p className="text-gray-600">
-                    Simply click "Create Event" in the navigation, fill out the
+                    Simply click Create Event in the navigation, fill out the
                     event details, set your ticket prices (if any), and publish.
                     It takes less than 5 minutes!
                   </p>
@@ -429,10 +448,10 @@ const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    What's the maximum number of attendees?
+                    What is the maximum number of attendees?
                   </h3>
                   <p className="text-gray-600">
-                    There's no limit! Eventify scales from intimate gatherings
+                    There is no limit! Eventify scales from intimate gatherings
                     of 10 people to massive conferences with 50,000+ attendees.
                   </p>
                 </div>
@@ -497,7 +516,7 @@ const ContactPage = () => {
                 Our Support Hours
               </h2>
               <p className="text-xl text-gray-600">
-                We're here when you need us most
+                We are here when you need us most
               </p>
             </div>
 
@@ -556,8 +575,8 @@ const ContactPage = () => {
               Still Have Questions?
             </h2>
             <p className="text-xl mb-8 text-primary-light">
-              Our team is standing by to help you succeed. Don't hesitate to
-              reach out - we're here to make your event journey as smooth as
+              Our team is standing by to help you succeed. Dont hesitate to
+              reach out - we are here to make your event journey as smooth as
               possible.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

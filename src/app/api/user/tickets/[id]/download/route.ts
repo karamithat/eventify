@@ -1,16 +1,28 @@
-import { NextResponse } from "next/server";
+// app/api/tickets/[id]/download/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 
+export const runtime = "nodejs"; // PDFKit için Node runtime
+
 const prisma = new PrismaClient();
 
-export async function GET(request, { params }) {
+type TicketWithEvent = Prisma.TicketGetPayload<{
+  include: {
+    event: { include: { author: true } };
+    attendees: true;
+  };
+}>;
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -18,18 +30,14 @@ export async function GET(request, { params }) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const ticket = await prisma.ticket.findFirst({
-      where: {
-        id: params.id,
-        userId: user.id,
-      },
+      where: { id: params.id, userId: user.id },
       include: {
-        event: {
-          include: {
-            author: true,
-          },
-        },
+        event: { include: { author: true } },
         attendees: true,
       },
     });
@@ -40,25 +48,22 @@ export async function GET(request, { params }) {
 
     // PDF oluştur
     const doc = new PDFDocument({ size: "A4", margin: 50 });
-    const chunks = [];
+    const chunks: Buffer[] = [];
 
-    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       doc.on("end", () => {
         const pdfBuffer = Buffer.concat(chunks);
-
         const response = new NextResponse(pdfBuffer);
         response.headers.set("Content-Type", "application/pdf");
         response.headers.set(
           "Content-Disposition",
           `attachment; filename="ticket-${ticket.ticketNumber}.pdf"`
         );
-
         resolve(response);
       });
 
-      // PDF içeriği oluştur
       generateTicketPDF(doc, ticket);
       doc.end();
     });
@@ -68,16 +73,20 @@ export async function GET(request, { params }) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 // PDF oluşturma yardımcı fonksiyonu
-async function generateTicketPDF(doc, ticket) {
+async function generateTicketPDF(
+  doc: PDFKit.PDFDocument,
+  ticket: TicketWithEvent
+) {
   const event = ticket.event;
 
   // Header
   doc.fontSize(24).font("Helvetica-Bold").text("EVENT TICKET", 50, 50);
-
   doc
     .fontSize(12)
     .font("Helvetica")
@@ -101,11 +110,13 @@ async function generateTicketPDF(doc, ticket) {
   // Location
   const location =
     event.location === "Venue"
-      ? `${event.venueName}, ${event.venueAddress}, ${event.venueCity}`
+      ? `${event.venueName || ""}, ${event.venueAddress || ""}, ${
+          event.venueCity || ""
+        }`
       : event.location;
   doc.text(`Location: ${location}`, 50, 200);
 
-  // Price
+  // Price / Quantity
   if (event.eventType === "ticketed") {
     doc.text(`Price: ₺${ticket.totalAmount}`, 50, 220);
     doc.text(`Quantity: ${ticket.quantity}`, 50, 240);
@@ -115,15 +126,20 @@ async function generateTicketPDF(doc, ticket) {
 
   // Attendees
   doc.fontSize(14).font("Helvetica-Bold").text("Attendees:", 50, 280);
-
   let yPos = 300;
-  ticket.attendees.forEach((attendee, index) => {
-    doc
-      .fontSize(11)
-      .font("Helvetica")
-      .text(`${index + 1}. ${attendee.fullName} - ${attendee.email}`, 70, yPos);
-    yPos += 20;
-  });
+  ticket.attendees.forEach(
+    (attendee: TicketWithEvent["attendees"][number], index: number) => {
+      doc
+        .fontSize(11)
+        .font("Helvetica")
+        .text(
+          `${index + 1}. ${attendee.fullName} - ${attendee.email}`,
+          70,
+          yPos
+        );
+      yPos += 20;
+    }
+  );
 
   // QR Code
   try {
@@ -132,13 +148,12 @@ async function generateTicketPDF(doc, ticket) {
     const qrCodeBuffer = Buffer.from(qrCodeBase64, "base64");
 
     doc.image(qrCodeBuffer, 400, 300, { width: 120, height: 120 });
-
     doc
       .fontSize(10)
       .font("Helvetica")
       .text("Scan this QR code at the entrance", 400, 430);
-  } catch (error) {
-    console.error("Error generating QR code:", error);
+  } catch (e) {
+    console.error("Error generating QR code:", e);
     doc
       .fontSize(10)
       .font("Helvetica")

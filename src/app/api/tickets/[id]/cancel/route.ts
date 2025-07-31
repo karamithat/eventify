@@ -6,7 +6,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(request, { params }) {
+export async function POST(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     console.log("🚫 Cancel ticket API called for ticket:", params.id);
 
@@ -41,6 +44,8 @@ export async function POST(request, { params }) {
       isTicketModel = true;
       console.log("✅ Found ticket via Ticket model");
     } catch (ticketError) {
+      console.log("Ticket model error:", ticketError);
+
       console.log("⚠️ Ticket model not available, trying EventRegistration...");
 
       // EventRegistration modelini deneyelim
@@ -121,7 +126,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error("❌ Error cancelling ticket:", error);
     return NextResponse.json(
-      { error: "Internal server error: " + error.message },
+      { error: "Internal server error: " },
       { status: 500 }
     );
   } finally {

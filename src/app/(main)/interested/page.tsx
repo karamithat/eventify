@@ -37,13 +37,6 @@ interface Event {
   };
 }
 
-interface User {
-  id: string;
-  name?: string;
-  email: string;
-  interests: string[];
-}
-
 const InterestedPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();

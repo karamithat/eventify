@@ -1,88 +1,73 @@
-// /api/tickets/create/route.js
-import { NextResponse } from "next/server";
+// app/api/tickets/create/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 
-export async function POST(request) {
+type AttendeeInput = {
+  fullName?: string;
+  email?: string;
+  phone?: string | null;
+};
+type CreateTicketBody = {
+  eventId: string;
+  quantity: number;
+  attendees?: AttendeeInput[];
+  paymentId?: string | null;
+};
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    console.log("🎫 Ticket creation API called");
-
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.email) {
-      console.log("❌ No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
-
-    if (!user) {
-      console.log("❌ User not found:", session.user.email);
+    if (!user)
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
-    const body = await request.json();
-    const { eventId, quantity, attendees, paymentId } = body;
+    const { eventId, quantity, attendees, paymentId } =
+      (await request.json()) as CreateTicketBody;
 
-    console.log("📝 Request data:", {
-      eventId,
-      quantity,
-      attendees: attendees?.length,
-      paymentId,
-    });
-
-    // Event kontrolü
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: { author: true },
     });
-
-    if (!event) {
-      console.log("❌ Event not found:", eventId);
+    if (!event)
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    if (!event.isPublished) {
-      console.log("❌ Event not published:", eventId);
+    if (!event.isPublished)
       return NextResponse.json(
         { error: "Event not published" },
         { status: 400 }
       );
-    }
 
-    console.log("✅ Event found:", event.title);
-
-    // Fiyat hesaplama
     const totalAmount =
-      event.eventType === "free" ? 0 : (event.ticketPrice || 0) * quantity;
+      event.eventType === "free"
+        ? 0
+        : (event.ticketPrice || 0) * (quantity || 1);
 
-    // Unique ticket number ve QR code oluştur
     const ticketNumber = `TKT-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)
+      .slice(2, 11)
       .toUpperCase()}`;
     const qrCode = `QR-${uuidv4()}`;
 
-    console.log("🎟️ Creating ticket:", { ticketNumber, totalAmount, qrCode });
-
-    // Transaction ile bilet oluştur
-    const result = await prisma.$transaction(async (prisma) => {
-      // Bilet oluştur
-      const newTicket = await prisma.ticket.create({
+    const result = await prisma.$transaction(async (tx) => {
+      const newTicket = await tx.ticket.create({
         data: {
           ticketNumber,
           userId: user.id,
-          eventId: eventId,
+          eventId,
           quantity: quantity || 1,
           totalAmount,
           qrCode,
-          paymentId: paymentId || null,
+          paymentId: paymentId ?? null,
           paymentStatus:
             event.eventType === "free"
               ? "COMPLETED"
@@ -93,25 +78,16 @@ export async function POST(request) {
         },
       });
 
-      console.log("✅ Ticket created:", newTicket.id);
-
-      // Attendees oluştur
-      if (attendees && attendees.length > 0) {
-        const attendeeData = attendees.map((attendee) => ({
+      if (attendees?.length) {
+        const attendeeData = attendees.map((a: AttendeeInput) => ({
           ticketId: newTicket.id,
-          fullName: attendee.fullName || "Unknown",
-          email: attendee.email || user.email,
-          phone: attendee.phone || null,
+          fullName: a.fullName ?? "Unknown",
+          email: a.email ?? user.email,
+          phone: a.phone ?? null,
         }));
-
-        await prisma.ticketAttendee.createMany({
-          data: attendeeData,
-        });
-
-        console.log("✅ Attendees created:", attendeeData.length);
+        await tx.ticketAttendee.createMany({ data: attendeeData });
       } else {
-        // Fallback: kullanıcının kendisi için attendee oluştur
-        await prisma.ticketAttendee.create({
+        await tx.ticketAttendee.create({
           data: {
             ticketId: newTicket.id,
             fullName: user.name || "Unknown",
@@ -119,17 +95,10 @@ export async function POST(request) {
             phone: null,
           },
         });
-
-        console.log("✅ Default attendee created for user");
       }
 
       return newTicket;
     });
-
-    console.log("🎉 Transaction completed successfully");
-
-    // Email gönderme işlemi burada yapılabilir
-    // await sendTicketConfirmationEmail(user.email, ticket, event);
 
     return NextResponse.json({
       success: true,
@@ -138,19 +107,18 @@ export async function POST(request) {
       ticketNumber: result.ticketNumber,
       qrCode: result.qrCode,
     });
-  } catch (error) {
-    console.error("❌ Error creating ticket:", error);
-
-    // Specific error handling
-    if (error.code === "P2002") {
+  } catch (err: unknown) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
       return NextResponse.json(
         { error: "Duplicate ticket number. Please try again." },
         { status: 409 }
       );
     }
-
     return NextResponse.json(
-      { error: "Internal server error: " + error.message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   } finally {

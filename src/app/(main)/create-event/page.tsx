@@ -219,12 +219,14 @@ const CreateEventPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const cities =
-          data.data?.map((city: any) => ({
-            name: city.name,
-            country: city.country,
-            population: city.population,
-          })) || [];
+        const cities: City[] =
+          data.data?.map(
+            (city: { name: string; country: string; population?: number }) => ({
+              name: city.name,
+              country: city.country,
+              population: city.population,
+            })
+          ) || [];
         setCitySearchResults(cities);
       } else {
         console.log("API Error:", response.status);

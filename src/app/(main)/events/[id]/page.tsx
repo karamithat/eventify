@@ -417,6 +417,7 @@ const EventDetailPage = () => {
 
         if (response.ok) {
           const result = await response.json();
+          console.log(result);
           toast.success("Successfully registered for the event!");
 
           // Modal'ı kapat ve state'i temizle
@@ -560,17 +561,12 @@ const EventDetailPage = () => {
         }
       }
     } catch (error) {
-      console.error("❌ Purchase error:", error);
-
-      // Network hatası mı kontrol et
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        toast.error(
-          "Network error. Please check your connection and try again."
-        );
-      } else if (error.name === "SyntaxError") {
-        toast.error("Invalid response from server. Please try again.");
+      if (error instanceof Error) {
+        console.error("Error:", error.message);
+        toast.error(error.message);
       } else {
-        toast.error("An unexpected error occurred. Please try again.");
+        console.error("Unknown error:", error);
+        toast.error("An unknown error occurred.");
       }
     }
   };
